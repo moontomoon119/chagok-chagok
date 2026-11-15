@@ -11,7 +11,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -120,5 +122,8 @@ fun ZoomPhoto(pic: Pic, modifier: Modifier = Modifier) {
     val zoom by rememberInfiniteTransition(label = "zoom").animateFloat(
         1f, 1.12f, infiniteRepeatable(tween(6000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "z",
     )
-    PhotoArt(pic, modifier.graphicsLayer { scaleX = zoom; scaleY = zoom })
+    // 확대한 사진이 원래 영역 밖으로 번지지 않게, 바깥 상자에서 잘라 준다
+    Box(modifier.clipToBounds()) {
+        PhotoArt(pic, Modifier.fillMaxSize().graphicsLayer { scaleX = zoom; scaleY = zoom })
+    }
 }
