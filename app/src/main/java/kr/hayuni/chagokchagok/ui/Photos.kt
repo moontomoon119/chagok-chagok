@@ -29,7 +29,7 @@ object Photos {
 
     /** 오늘의 기록 5장 (시나리오 순서: 우리 집 → 가평휴게소 → 의암호 길 → 춘천 케이블카 → 귀갓길) */
     val today = listOf(
-        Pic(R.drawable.today_0, R.raw.today_0, TW),
+        Pic(R.drawable.today_0, R.raw.today_0, 4f / 3f),
         Pic(R.drawable.today_1, R.raw.today_1, GAPYEONG),
         Pic(R.drawable.today_2, R.raw.today_2, TW),
         Pic(R.drawable.today_3, R.raw.today_3, TW),
