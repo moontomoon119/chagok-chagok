@@ -86,15 +86,17 @@ object Scenario {
         TimelineEvent("09:25", "가평휴게소", "18분 쉬어 감", "문 네 개가 열렸다가 18분 뒤에 닫혔어요", "문 4개", Palette.Sky),
         TimelineEvent("10:05", "의암호 길", "안개 속을 달림", "안개등이 켜지고 뒷창문 두 개가 3분쯤 내려갔어요", "안개등 · 창문", Palette.Amber),
         TimelineEvent("12:45", "춘천 케이블카", "한마디 남김", "다시 탑승하자 차가 물었어요. “여기 어땠어요?”", "한마디", Palette.Lilac),
-        TimelineEvent("15:20", "귀갓길", "집으로 출발", "목적지를 집으로 바꾸자 차가 하루를 읽어 줄 준비를 해요", "귀갓길", Palette.Mint),
+        TimelineEvent("15:20", "해 질 무렵", "노을 속을 달림", "차창 가득 노을이 번졌어요", "노을", Palette.Amber),
+        // 심사용 마지막 장면: 지금 이 순간 "집 가는 중" (도로 주행 화면). 한마디·귀갓길 낭독으로 이어진다.
+        TimelineEvent("15:40", "집 가는 중", "집까지 1시간 35분", "목적지를 집으로 바꾸자 차가 오늘 하루를 읽어 줄 준비를 해요", "귀갓길", Palette.Mint),
     )
 
     /** events 와 같은 순서의 장면 */
-    val eventScenes = listOf(SceneKind.Meadow, SceneKind.Highway, SceneKind.LakeFog, SceneKind.Cable, SceneKind.Sunset)
+    val eventScenes = listOf(SceneKind.Meadow, SceneKind.Highway, SceneKind.LakeFog, SceneKind.Cable, SceneKind.Sunset, SceneKind.Road)
 
     /**
-     * 처음 시작할 때의 오늘의 기록 = "춘천 당일치기를 마치고 귀가 중"인 상황(15:20).
-     * 한마디(12:45)와 귀갓길(15:20)까지 이미 쌓여 있어서 한마디·귀갓길 낭독을 바로 쓸 수 있다.
+     * 처음 시작할 때의 오늘의 기록 = "춘천 당일치기를 마치고 귀가 중"인 상황(마지막 카드 "집 가는 중" 15:40).
+     * 한마디(12:45)와 집 가는 중(15:40)까지 이미 쌓여 있어서 한마디·귀갓길 낭독을 바로 쓸 수 있다.
      */
     fun defaultClips(): List<TodayClip> = events.mapIndexed { i, e ->
         TodayClip(i, e.time, e.place, e.title, e.detail, e.tag, e.color.toArgb(), eventScenes[i], i)
@@ -138,7 +140,7 @@ object Scenario {
         ),
         StoryLine(
             "이제 집까지 1시간 35분. 오늘의 길은 가족지도에 남았어요.",
-            listOf("귀갓길 15:20", "가족지도"),
+            listOf("집 가는 중 15:40", "가족지도"),
         ),
     )
 

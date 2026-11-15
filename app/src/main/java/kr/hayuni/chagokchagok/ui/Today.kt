@@ -538,7 +538,7 @@ private fun StoryPage() {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
 
         Column(Modifier.align(Alignment.TopStart).padding(40.dp)) {
-            Text("15:20 · 집까지 1시간 35분 남았어요", color = Color.White.copy(alpha = 0.85f), fontSize = Type.Body)
+            Text("15:40 · 집까지 1시간 35분 남았어요", color = Color.White.copy(alpha = 0.85f), fontSize = Type.Body)
             Spacer(Modifier.height(6.dp))
             Text("「${Scenario.STORY_TITLE}」", color = Color.White, fontSize = Type.Title, fontWeight = FontWeight.Bold)
         }

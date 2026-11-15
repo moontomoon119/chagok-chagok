@@ -27,7 +27,7 @@ object Photos {
     private const val TW = 1080f / 2386f   // 오늘의 기록: 세로 숏폼
     private const val GAPYEONG = 720f / 768f   // 가평휴게소: 직접 찍은 실제 사진(오늘의 기록·갤러리 공용)
 
-    /** 오늘의 기록 5장 (시나리오 순서: 우리 집 → 가평휴게소 → 의암호 길 → 춘천 케이블카 → 귀갓길) */
+    /** 오늘의 기록 5장 (시나리오 순서: 우리 집 → 가평휴게소 → 의암호 길 → 춘천 케이블카 → 노을). 6번째 "집 가는 중"은 카메라 도로(Road) */
     val today = listOf(
         Pic(R.drawable.today_0, R.raw.today_0, 4f / 3f),
         Pic(R.drawable.today_1, R.raw.today_1, GAPYEONG),
