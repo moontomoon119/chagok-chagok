@@ -1,5 +1,7 @@
 package kr.hayuni.chagokchagok
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -7,6 +9,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.graphics.Canvas
 import android.graphics.Color
@@ -14,16 +17,17 @@ import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.RectF
 import android.graphics.drawable.GradientDrawable
-import android.hardware.display.DisplayManager
-import android.hardware.display.VirtualDisplay
+import android.hardware.camera2.CameraCaptureSession
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraDevice
+import android.hardware.camera2.CameraManager
 import android.media.MediaRecorder
-import android.media.projection.MediaProjection
-import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
-import android.util.DisplayMetrics
+import android.util.Size
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -31,48 +35,53 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
 import kr.hayuni.chagokchagok.data.VideoStore
+import java.io.File
 import kotlin.math.abs
 
 /**
  * 다른 앱을 쓰는 동안에도 화면 위에 떠 있는 "차곡차곡 기록 중" 동그라미.
- * 동그라미를 누르면 지금 화면(내비·음악 등 다른 앱 포함)을 5초 동안 영상으로 저장한다.
- * 화면 녹화(MediaProjection)를 쓰며 소리는 1차에서는 넣지 않았다. (소리는 이후 유지/삭제 결정)
- * 저장 위치는 영상 보관함(VideoStore)과 같다.
+ * 동그라미를 누르면 **카메라 영상 + 차 안의 소리(마이크)** 를 5초 동안 mp4 로 저장한다.
+ *  - 카메라가 없는 기기(예: 일부 차량 에뮬레이터)에서는 소리만 m4a 로 저장한다.
+ *  - 저장 위치는 영상 보관함(VideoStore)과 같다.
+ * 소리는 일단 포함해 두었고, 이후 유지/삭제를 정한다.(RECORD_WITH_SOUND)
  */
 class OverlayService : Service() {
 
     companion object {
         private const val ACTION_STOP = "kr.hayuni.chagokchagok.STOP_OVERLAY"
-        private const val EXTRA_CODE = "code"
-        private const val EXTRA_DATA = "data"
         private const val CHANNEL = "overlay"
         const val RECORD_MS = 5000L
+
+        /** 소리를 함께 기록할지 (이후 유지/삭제 결정) */
+        const val RECORD_WITH_SOUND = true
 
         @Volatile
         var running = false
             private set
 
-        fun start(ctx: Context, code: Int, data: Intent) {
-            val i = Intent(ctx, OverlayService::class.java).putExtra(EXTRA_CODE, code).putExtra(EXTRA_DATA, data)
-            ctx.startForegroundService(i)
-        }
-
-        fun stop(ctx: Context) {
-            ctx.stopService(Intent(ctx, OverlayService::class.java))
+        fun start(ctx: Context) {
+            ctx.startForegroundService(Intent(ctx, OverlayService::class.java))
         }
     }
 
     private val handler = Handler(Looper.getMainLooper())
+    private val camThread = HandlerThread("chagok-camera").apply { start() }
+    private val camHandler by lazy { Handler(camThread.looper) }
+
     private lateinit var wm: WindowManager
     private var root: LinearLayout? = null
     private var label: TextView? = null
     private var bubble: BubbleView? = null
 
-    private var projection: MediaProjection? = null
-    private var display: VirtualDisplay? = null
-    private var vw = 0
-    private var vh = 0
+    private var cameraId: String? = null
+    private var sensorOrientation = 0
+    private var videoSize = Size(1280, 720)
+    private var hasMic = false
     private var recording = false
+
+    private var activeRecorder: MediaRecorder? = null
+    private var activeCamera: CameraDevice? = null
+    private var activeSession: CameraCaptureSession? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -81,17 +90,25 @@ class OverlayService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        startAsForeground()
-        @Suppress("DEPRECATION")
-        val data = intent?.getParcelableExtra<Intent>(EXTRA_DATA)
-        val code = intent?.getIntExtra(EXTRA_CODE, 0) ?: 0
-        if (data == null || running) {
-            if (!running) stopSelf()
+        if (running) return START_NOT_STICKY
+
+        val hasCamPerm = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        hasMic = RECORD_WITH_SOUND && checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        cameraId = if (hasCamPerm) pickCamera() else null
+
+        var type = 0
+        if (Build.VERSION.SDK_INT >= 30) {
+            if (cameraId != null) type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+            if (hasMic) type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        }
+        startAsForeground(type)
+        if (cameraId == null && !hasMic) {
+            stopSelf()
             return START_NOT_STICKY
         }
+
         wm = getSystemService(WINDOW_SERVICE) as WindowManager
         try {
-            setupProjection(code, data)
             addBubble()
             running = true
         } catch (e: Exception) {
@@ -100,7 +117,7 @@ class OverlayService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun startAsForeground() {
+    private fun startAsForeground(type: Int) {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CHANNEL, "차곡차곡 기록", NotificationManager.IMPORTANCE_LOW))
         val stopPi = PendingIntent.getService(
@@ -110,36 +127,29 @@ class OverlayService : Service() {
         val n = Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.presence_video_online)
             .setContentTitle("차곡차곡 기록 중")
-            .setContentText("동그라미를 누르면 지금 화면이 5초 동안 저장돼요")
+            .setContentText("동그라미를 누르면 카메라와 소리가 5초 동안 저장돼요")
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "중지", stopPi)
             .build()
-        if (Build.VERSION.SDK_INT >= 29) {
-            startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
-        } else {
-            startForeground(1, n)
+        if (Build.VERSION.SDK_INT >= 29 && type != 0) startForeground(1, n, type) else startForeground(1, n)
+    }
+
+    /** 뒷면 카메라 우선, 없으면 첫 번째 카메라. 카메라가 없으면 null (소리만 기록) */
+    @SuppressLint("MissingPermission")
+    private fun pickCamera(): String? = runCatching {
+        val cm = getSystemService(CameraManager::class.java)
+        val ids = cm.cameraIdList
+        val id = ids.firstOrNull { cm.getCameraCharacteristics(it).get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK }
+            ?: ids.firstOrNull()
+        if (id != null) {
+            val ch = cm.getCameraCharacteristics(id)
+            sensorOrientation = ch.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
+            val sizes = ch.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+                ?.getOutputSizes(MediaRecorder::class.java)?.toList().orEmpty()
+            videoSize = sizes.filter { it.width <= 1280 }.maxByOrNull { it.width * it.height }
+                ?: sizes.minByOrNull { it.width * it.height } ?: videoSize
         }
-    }
-
-    private fun setupProjection(code: Int, data: Intent) {
-        val mpm = getSystemService(MediaProjectionManager::class.java)
-        val p = mpm.getMediaProjection(code, data)
-        p.registerCallback(object : MediaProjection.Callback() {
-            override fun onStop() { handler.post { stopSelf() } }
-        }, handler)
-        projection = p
-
-        val dm = DisplayMetrics()
-        @Suppress("DEPRECATION")
-        wm.defaultDisplay.getRealMetrics(dm)
-        // 인코더 부담을 줄이려고 절반 해상도로 녹화 (짝수로 맞춤)
-        vw = (dm.widthPixels / 2) / 2 * 2
-        vh = (dm.heightPixels / 2) / 2 * 2
-        // Android 14: 토큰당 VirtualDisplay 는 한 번만 만들고, 녹화할 때마다 surface 만 바꿔 끼운다.
-        display = p.createVirtualDisplay(
-            "chagok-record", vw, vh, dm.densityDpi,
-            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, null, null, handler,
-        )
-    }
+        id
+    }.getOrNull()
 
     private fun addBubble() {
         val d = resources.displayMetrics.density
@@ -191,44 +201,109 @@ class OverlayService : Service() {
         this.root = box
         this.label = label
         this.bubble = bubble
+        label.text = when {
+            cameraId != null && hasMic -> "차곡차곡 기록 중"
+            cameraId != null -> "차곡차곡 기록 중 · 소리 꺼짐"
+            else -> "차곡차곡 기록 중 · 카메라 없음(소리만)"
+        }
     }
 
+    // ───────────────────────── 5초 기록 ─────────────────────────
+
     private fun record5s() {
-        val disp = display ?: return
         if (recording) return
         recording = true
-        val file = VideoStore.newClipFile(this)
+        val withVideo = cameraId != null
+        val file = if (withVideo) VideoStore.newClipFile(this) else VideoStore.newAudioFile(this)
+        val rec = buildRecorder(file, withVideo)
+        if (rec == null) { fail(file, "기록하지 못했어요"); return }
+        activeRecorder = rec
+        if (withVideo) openCameraAndRecord(rec, file) else {
+            try { rec.start() } catch (e: Exception) { fail(file, "기록하지 못했어요"); return }
+            startTimer(file)
+        }
+    }
+
+    private fun buildRecorder(file: File, withVideo: Boolean): MediaRecorder? {
         val rec = if (Build.VERSION.SDK_INT >= 31) MediaRecorder(this) else @Suppress("DEPRECATION") MediaRecorder()
-        try {
-            rec.setVideoSource(MediaRecorder.VideoSource.SURFACE)
+        return try {
+            if (hasMic) rec.setAudioSource(MediaRecorder.AudioSource.MIC)
+            if (withVideo) rec.setVideoSource(MediaRecorder.VideoSource.SURFACE)
             rec.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            if (withVideo) {
+                rec.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
+                rec.setVideoSize(videoSize.width, videoSize.height)
+                rec.setVideoFrameRate(30)
+                rec.setVideoEncodingBitRate(8_000_000)
+                rec.setOrientationHint(sensorOrientation)
+            }
+            if (hasMic) {
+                rec.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                rec.setAudioEncodingBitRate(128_000)
+                rec.setAudioSamplingRate(44_100)
+            }
             rec.setOutputFile(file.absolutePath)
-            rec.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-            rec.setVideoSize(vw, vh)
-            rec.setVideoFrameRate(30)
-            rec.setVideoEncodingBitRate(6_000_000)
             rec.prepare()
-            disp.surface = rec.surface
-            rec.start()
+            rec
         } catch (e: Exception) {
             rec.release()
-            recording = false
-            flash("기록하지 못했어요")
-            return
+            null
         }
+    }
 
+    @SuppressLint("MissingPermission")
+    private fun openCameraAndRecord(rec: MediaRecorder, file: File) {
+        val id = cameraId ?: return fail(file, "카메라를 열지 못했어요")
+        val cm = getSystemService(CameraManager::class.java)
+        try {
+            cm.openCamera(id, object : CameraDevice.StateCallback() {
+                override fun onOpened(camera: CameraDevice) {
+                    activeCamera = camera
+                    try {
+                        val surface = rec.surface
+                        @Suppress("DEPRECATION")
+                        camera.createCaptureSession(listOf(surface), object : CameraCaptureSession.StateCallback() {
+                            override fun onConfigured(session: CameraCaptureSession) {
+                                activeSession = session
+                                try {
+                                    val req = camera.createCaptureRequest(CameraDevice.TEMPLATE_RECORD).apply { addTarget(surface) }.build()
+                                    session.setRepeatingRequest(req, null, camHandler)
+                                    rec.start()
+                                    handler.post { startTimer(file) }
+                                } catch (e: Exception) {
+                                    handler.post { fail(file, "기록하지 못했어요") }
+                                }
+                            }
+
+                            override fun onConfigureFailed(session: CameraCaptureSession) {
+                                handler.post { fail(file, "카메라 설정에 실패했어요") }
+                            }
+                        }, camHandler)
+                    } catch (e: Exception) {
+                        handler.post { fail(file, "기록하지 못했어요") }
+                    }
+                }
+
+                override fun onDisconnected(camera: CameraDevice) { camera.close() }
+                override fun onError(camera: CameraDevice, error: Int) {
+                    camera.close()
+                    handler.post { fail(file, "카메라를 열지 못했어요") }
+                }
+            }, camHandler)
+        } catch (e: Exception) {
+            fail(file, "카메라를 열지 못했어요")
+        }
+    }
+
+    private fun startTimer(file: File) {
         val startAt = System.currentTimeMillis()
         bubble?.setRecording(true, 0f)
         val tick = object : Runnable {
             override fun run() {
+                if (!recording) return
                 val el = System.currentTimeMillis() - startAt
                 if (el >= RECORD_MS) {
-                    try { rec.stop() } catch (_: Exception) { }
-                    rec.release()
-                    disp.surface = null
-                    recording = false
-                    bubble?.setRecording(false, 0f)
-                    flash("저장됨 ✓  갤러리 > 영상 보관함")
+                    finishRecording(file)
                 } else {
                     bubble?.setRecording(true, el / RECORD_MS.toFloat())
                     label?.text = "녹화 중 ${((RECORD_MS - el) / 1000) + 1}초"
@@ -239,16 +314,51 @@ class OverlayService : Service() {
         handler.post(tick)
     }
 
+    private fun finishRecording(file: File) {
+        releaseRecording(stopRecorder = true)
+        bubble?.setRecording(false, 0f)
+        recording = false
+        flash(if (cameraId != null) "저장됨 ✓ 갤러리 > 영상 보관함" else "소리 저장됨 ✓ 갤러리 > 영상 보관함")
+    }
+
+    private fun fail(file: File, msg: String) {
+        releaseRecording(stopRecorder = false)
+        runCatching { file.delete() }
+        bubble?.setRecording(false, 0f)
+        recording = false
+        flash(msg)
+    }
+
+    private fun releaseRecording(stopRecorder: Boolean) {
+        val rec = activeRecorder
+        activeRecorder = null
+        if (rec != null) {
+            if (stopRecorder) runCatching { rec.stop() }
+            runCatching { rec.release() }
+        }
+        runCatching { activeSession?.close() }
+        runCatching { activeCamera?.close() }
+        activeSession = null
+        activeCamera = null
+    }
+
     private fun flash(msg: String) {
         label?.text = msg
-        handler.postDelayed({ if (!recording) label?.text = "차곡차곡 기록 중" }, 2800)
+        handler.postDelayed({
+            if (!recording) label?.text = when {
+                cameraId != null && hasMic -> "차곡차곡 기록 중"
+                cameraId != null -> "차곡차곡 기록 중 · 소리 꺼짐"
+                else -> "차곡차곡 기록 중 · 카메라 없음(소리만)"
+            }
+        }, 2800)
     }
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
+        recording = false
+        releaseRecording(stopRecorder = false)
         root?.let { runCatching { wm.removeView(it) } }
-        runCatching { display?.release() }
-        runCatching { projection?.stop() }
+        camThread.quitSafely()
         running = false
         super.onDestroy()
     }

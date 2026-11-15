@@ -15,7 +15,7 @@ import java.util.Locale
  *  경로: Android/data/kr.hayuni.chagokchagok/files/Movies
  */
 object VideoStore {
-    private val exts = setOf("mp4", "mov", "webm", "mkv", "3gp")
+    private val exts = setOf("mp4", "mov", "webm", "mkv", "3gp", "m4a")
 
     fun dir(ctx: Context): File =
         (ctx.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: File(ctx.filesDir, "movies")).also { it.mkdirs() }
@@ -35,5 +35,11 @@ object VideoStore {
     fun newClipFile(ctx: Context): File {
         val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         return File(dir(ctx), "clip_$stamp.mp4")
+    }
+
+    /** 카메라가 없을 때 소리만 저장하는 파일 */
+    fun newAudioFile(ctx: Context): File {
+        val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        return File(dir(ctx), "clip_$stamp.m4a")
     }
 }

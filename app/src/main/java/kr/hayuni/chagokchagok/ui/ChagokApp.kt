@@ -53,7 +53,7 @@ fun ChagokApp(onBackgroundRecord: () -> Unit = {}) {
     var cameFromMain by remember { mutableStateOf(false) }
     var tab by remember { mutableIntStateOf(0) }
     var parked by remember { mutableStateOf(true) }          // 주차 브레이크 (데모용 토글)
-    var shown by remember { mutableIntStateOf(Scenario.events.size) }
+    var shown by remember { mutableIntStateOf(0) }
     var replayKey by remember { mutableIntStateOf(0) }
     var replaying by remember { mutableStateOf(false) }
 
@@ -89,9 +89,15 @@ fun ChagokApp(onBackgroundRecord: () -> Unit = {}) {
             Stage.Start -> StartScreen(onStart = { cameFromMain = false; stage = Stage.Camera })
             Stage.Camera -> CameraScreen(
                 onBack = { stage = if (cameFromMain) Stage.Main else Stage.Start },
-                onGallery = { tab = 1; cameFromMain = true; stage = Stage.Main },
-                onCaptured = { tab = 0; cameFromMain = true; stage = Stage.Main; replayKey++ },
+                onToday = { tab = 0; cameFromMain = true; stage = Stage.Main },
+                // 촬영해도 화면은 넘어가지 않는다. 오늘의 기록에 한 칸씩 쌓이고, 저장됐다는 안내만 돌려준다.
+                onCaptured = {
+                    val n = (shown + 1).coerceAtMost(Scenario.events.size)
+                    shown = n
+                    if (n >= Scenario.events.size) "오늘의 기록 ${n}개가 모두 쌓였어요 ✓" else "오늘의 기록 ${n}번째 순간이 저장됐어요 ✓"
+                },
                 onBackground = onBackgroundRecord,
+                count = shown,
             )
             Stage.Main -> Column(Modifier.fillMaxSize()) {
                 TopBar(
@@ -103,7 +109,7 @@ fun ChagokApp(onBackgroundRecord: () -> Unit = {}) {
                 )
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     when (tab) {
-                        0 -> TodayScreen(shown, replaying, onReplay = { replayKey++ })
+                        0 -> TodayScreen(shown, replaying, onReplay = { replayKey++ }, onCamera = { cameFromMain = true; stage = Stage.Camera })
                         1 -> GalleryScreen(parked)
                         else -> SettingsScreen()
                     }

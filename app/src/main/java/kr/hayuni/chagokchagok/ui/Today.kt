@@ -46,7 +46,7 @@ import kotlin.math.sin
 
 /** 탭 1: 오늘의 기록 = 오늘 기록 / 한마디 / 귀갓길 낭독 */
 @Composable
-fun TodayScreen(shown: Int, replaying: Boolean, onReplay: () -> Unit) {
+fun TodayScreen(shown: Int, replaying: Boolean, onReplay: () -> Unit, onCamera: () -> Unit) {
     var sub by remember { mutableIntStateOf(0) }
     Column(
         Modifier
@@ -64,15 +64,15 @@ fun TodayScreen(shown: Int, replaying: Boolean, onReplay: () -> Unit) {
                 Spacer(Modifier.width(10.dp))
                 Text("기록 중", color = Palette.Text, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             } else {
-                Chip("오늘의 순간 ${Scenario.events.size}개", Palette.Mint, 20)
+                Chip("오늘의 순간 ${shown}개", Palette.Mint, 20)
             }
             Spacer(Modifier.width(20.dp))
-            BigButton("처음부터 다시", onReplay, enabled = !replaying, filled = false)
+            BigButton("하루 자동 재생", onReplay, enabled = !replaying, filled = false)
         }
         Spacer(Modifier.height(22.dp))
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (sub) {
-                0 -> Filmstrip(shown)
+                0 -> Filmstrip(shown, onCamera)
                 1 -> VoicePage()
                 else -> StoryPage()
             }
@@ -83,13 +83,21 @@ fun TodayScreen(shown: Int, replaying: Boolean, onReplay: () -> Unit) {
 // ───────────────────────── 오늘 기록: 1초 클립 필름 ─────────────────────────
 
 @Composable
-private fun Filmstrip(shown: Int) {
+private fun Filmstrip(shown: Int, onCamera: () -> Unit) {
     val state = rememberLazyListState()
     LaunchedEffect(shown) { if (shown > 0) state.animateScrollToItem((shown - 1).coerceAtLeast(0)) }
 
     if (shown == 0) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("시동이 걸리면 기록이 시작돼요.", color = Palette.TextDim, fontSize = 30.sp)
+        Column(
+            Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text("아직 오늘의 기록이 없어요.", color = Palette.Text, fontSize = 44.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(14.dp))
+            Text("카메라에서 촬영할 때마다 오늘의 순간이 한 칸씩 쌓여요.", color = Palette.TextDim, fontSize = 26.sp)
+            Spacer(Modifier.height(30.dp))
+            BigButton("촬영하러 가기", onCamera)
         }
         return
     }

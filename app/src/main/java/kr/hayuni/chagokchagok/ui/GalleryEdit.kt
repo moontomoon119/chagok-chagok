@@ -248,7 +248,7 @@ fun VideoVault() {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("영상 ${files.size}개", color = Palette.Text, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.width(16.dp))
-                    Text("오버레이로 찍은 5초 기록도 여기에 쌓여요", color = Palette.TextDim, fontSize = 20.sp)
+                    Text("동그라미로 찍은 카메라·소리 5초 기록도 여기에 쌓여요", color = Palette.TextDim, fontSize = 20.sp)
                     Spacer(Modifier.weight(1f))
                     BigButton("새로고침", { files = VideoStore.list(ctx) }, filled = false)
                 }
@@ -304,7 +304,7 @@ private fun VideoCard(f: File, onClick: () -> Unit) {
             drawPath(p, Color.White)
         }
         Column(Modifier.align(Alignment.BottomStart).padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (f.name.startsWith("clip_")) Chip("5초 기록", Palette.Amber, 18)
+            if (f.name.startsWith("clip_")) Chip(if (f.extension == "m4a") "소리 5초" else "5초 기록", Palette.Amber, 18)
             if (f.nameWithoutExtension.equals("road", true)) Chip("카메라 배경", Palette.Mint, 18)
             Text(f.name, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             val sec = info.durationMs / 1000

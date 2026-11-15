@@ -43,6 +43,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Shadow
 import kr.hayuni.chagokchagok.data.Palette
 import kr.hayuni.chagokchagok.data.SceneKind
+import kr.hayuni.chagokchagok.data.Scenario
+import kotlinx.coroutines.delay
 
 private val softShadow = Shadow(Color.Black.copy(alpha = 0.55f), Offset(0f, 3f), 12f)
 
@@ -139,7 +141,14 @@ private val signals = listOf(
 )
 
 @Composable
-fun CameraScreen(onBack: () -> Unit, onGallery: () -> Unit, onCaptured: () -> Unit, onBackground: () -> Unit) {
+fun CameraScreen(
+    onBack: () -> Unit,
+    onToday: () -> Unit,
+    onCaptured: () -> String,
+    onBackground: () -> Unit,
+    count: Int,
+) {
+    var toast by remember { mutableStateOf<String?>(null) }
     var dur by remember { mutableIntStateOf(1) }
     var capturing by remember { mutableStateOf(false) }
     val progress = remember { Animatable(0f) }
@@ -154,7 +163,13 @@ fun CameraScreen(onBack: () -> Unit, onGallery: () -> Unit, onCaptured: () -> Un
             flash.animateTo(0f, tween(260))
             capturing = false
             progress.snapTo(0f)
-            onCaptured()
+            toast = onCaptured()
+        }
+    }
+    LaunchedEffect(toast) {
+        if (toast != null) {
+            delay(2600)
+            toast = null
         }
     }
 
@@ -205,7 +220,7 @@ fun CameraScreen(onBack: () -> Unit, onGallery: () -> Unit, onCaptured: () -> Un
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                "버튼을 누르면 오늘의 기록이 시작돼요",
+                "버튼을 누르면 오늘의 기록이 쌓여요",
                 color = Color.White, fontSize = 24.sp, style = TextStyle(shadow = softShadow),
             )
             Spacer(Modifier.height(22.dp))
@@ -230,7 +245,7 @@ fun CameraScreen(onBack: () -> Unit, onGallery: () -> Unit, onCaptured: () -> Un
             Shutter(capturing, progress.value) { if (!capturing) capturing = true }
         }
 
-        // 하단 왼쪽: 갤러리 썸네일
+        // 하단 왼쪽: 오늘의 기록 썸네일 (누르면 오늘의 기록으로)
         Box(
             Modifier
                 .align(Alignment.BottomStart)
@@ -238,9 +253,37 @@ fun CameraScreen(onBack: () -> Unit, onGallery: () -> Unit, onCaptured: () -> Un
                 .size(104.dp)
                 .clip(RoundedCornerShape(22.dp))
                 .border(3.dp, Color.White, RoundedCornerShape(22.dp))
-                .clickable(enabled = !capturing, onClick = onGallery),
+                .clickable(enabled = !capturing, onClick = onToday),
         ) {
-            SceneArt(SceneKind.Sunset, Modifier.fillMaxSize())
+            if (count > 0) {
+                SceneArt(Scenario.eventScenes[(count - 1).coerceIn(0, Scenario.eventScenes.lastIndex)], Modifier.fillMaxSize(), seed = count - 1)
+                Text(
+                    "$count", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                        .clip(CircleShape)
+                        .background(Palette.Danger)
+                        .padding(horizontal = 10.dp, vertical = 2.dp),
+                )
+            } else {
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                    Text("오늘의\n기록", color = Color.White, fontSize = 18.sp, textAlign = TextAlign.Center)
+                }
+            }
+        }
+
+        // 저장 안내 (화면은 그대로)
+        toast?.let {
+            Text(
+                it, color = Palette.Mint, fontSize = 28.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 44.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .padding(horizontal = 34.dp, vertical = 16.dp),
+            )
         }
 
         // 하단 오른쪽: 다른 앱을 쓰면서 기록 (오버레이 동그라미)
@@ -259,7 +302,7 @@ fun CameraScreen(onBack: () -> Unit, onGallery: () -> Unit, onCaptured: () -> Un
             Spacer(Modifier.width(14.dp))
             Column {
                 Text("다른 앱과 함께 기록", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text("동그라미를 누르면 5초 저장", color = Color.White.copy(alpha = 0.8f), fontSize = 17.sp)
+                Text("동그라미를 누르면 카메라·소리 5초 저장", color = Color.White.copy(alpha = 0.8f), fontSize = 17.sp)
             }
         }
 
