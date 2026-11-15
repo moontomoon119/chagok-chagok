@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalContext
 import kr.hayuni.chagokchagok.data.VideoStore
 import androidx.compose.ui.text.TextStyle
@@ -180,7 +181,13 @@ fun CameraScreen(
         // 영상 보관함에 road.mp4 가 있으면 그 영상을, 없으면 그려 둔 도로를 배경으로
         val ctx = LocalContext.current
         val roadFile = remember { VideoStore.roadVideo(ctx) }
-        if (roadFile != null) LoopingVideo(roadFile, Modifier.fillMaxSize()) else CameraRoadBackdrop(Modifier.fillMaxSize())
+        if (roadFile != null) {
+            // 16:9 영상이 화면 좌우에 검은 띠를 남기지 않게 꽉 채운다 (가운데 기준)
+            BoxWithConstraints(Modifier.fillMaxSize().clipToBounds()) {
+                val s = (maxWidth.value / (maxHeight.value * 16f / 9f)).coerceAtLeast(1f)
+                LoopingVideo(roadFile, Modifier.fillMaxSize().graphicsLayer { scaleX = s; scaleY = s })
+            }
+        } else CameraRoadBackdrop(Modifier.fillMaxSize())
 
         // 상단
         CircleButton(Ico.Back, Modifier.align(Alignment.TopStart).padding(36.dp), onBack)

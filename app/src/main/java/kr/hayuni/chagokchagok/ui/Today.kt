@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kr.hayuni.chagokchagok.data.Palette
 import kr.hayuni.chagokchagok.data.SceneKind
+import kr.hayuni.chagokchagok.data.VideoStore
+import androidx.compose.ui.platform.LocalContext
 import kr.hayuni.chagokchagok.data.Scenario
 import kr.hayuni.chagokchagok.data.TodayClip
 import kotlin.math.PI
@@ -342,7 +344,17 @@ private fun ClipViewer(clips: List<TodayClip>, startId: Int, onClose: () -> Unit
                 } else {
                     // 실사 영상(3초, 천천히 확대)을 반복 재생. 영상이 없는 장면은 사진을 천천히 확대
                     val pic = Photos.of(clip.scene)
-                    if (pic.vid != null) key(clip.id, playKey) { PhotoVideo(pic, Modifier.fillMaxSize()) }
+                    val ctx = LocalContext.current
+                    val roadFile = remember(clip.scene) { if (clip.scene == SceneKind.Road) VideoStore.roadVideo(ctx) else null }
+                    if (roadFile != null) {
+                        // "집 가는 중": 도로 주행 영상(느리게) 반복 재생. 가로 영상을 세로 카드에 꽉 채워 가운데를 보여 준다
+                        key(clip.id, playKey) {
+                            BoxWithConstraints(Modifier.fillMaxSize().clipToBounds()) {
+                                val s = (maxHeight.value / (maxWidth.value * 9f / 16f)).coerceAtLeast(1f)
+                                LoopingVideo(roadFile, Modifier.fillMaxSize().graphicsLayer { scaleX = s; scaleY = s })
+                            }
+                        }
+                    } else if (pic.vid != null) key(clip.id, playKey) { PhotoVideo(pic, Modifier.fillMaxSize()) }
                     else PhotoArt(pic, Modifier.fillMaxSize().graphicsLayer { val sc = 1f + 0.12f * prog.value; scaleX = sc; scaleY = sc })
                 }
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.7f))))

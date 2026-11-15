@@ -11,7 +11,7 @@ import java.util.Locale
  * "동영상 저장소" (1차 시안에서는 앱 전용 Movies 폴더로 가정).
  *  - 앱에 들어 있는 예시 영상(assets/vault)이 처음 열 때 이 보관함으로 복사된다.
  *  - 팀이 준비한 저작권 프리 도로 영상을 이 폴더에 넣으면 갤러리 "영상 보관함"에 나타난다.
- *  - `road.mp4` 가 있으면 카메라 화면 배경으로 반복 재생된다.
+ *  - 도로 주행 영상("집 가는 중" 또는 road.mp4)은 카메라 화면 배경과 "집 가는 중" 카드로 반복 재생된다.
  *  - 오버레이 동그라미로 찍은 5초 기록도 같은 폴더에 저장된다.
  *  경로: Android/data/kr.hayuni.chagokchagok/files/Movies
  */
@@ -54,8 +54,11 @@ object VideoStore {
             .sortedByDescending { it.lastModified() }
     }
 
-    fun roadVideo(ctx: Context): File? =
-        list(ctx).firstOrNull { it.nameWithoutExtension.equals("road", ignoreCase = true) }
+    /** 카메라 배경·"집 가는 중" 카드에 쓰는 도로 주행 영상 (보관함의 "집 가는 중", 또는 사용자가 넣은 road.mp4) */
+    fun roadVideo(ctx: Context): File? = list(ctx).let { all ->
+        all.firstOrNull { it.nameWithoutExtension.equals("road", ignoreCase = true) }
+            ?: all.firstOrNull { it.nameWithoutExtension.contains("집 가는 중") }
+    }
 
     fun newClipFile(ctx: Context): File {
         val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
