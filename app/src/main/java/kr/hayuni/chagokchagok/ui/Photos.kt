@@ -33,7 +33,7 @@ object Photos {
         Pic(R.drawable.today_1, R.raw.today_1, GAPYEONG),
         Pic(R.drawable.today_2, R.raw.today_2, TW),
         Pic(R.drawable.today_3, R.raw.today_3, TW),
-        Pic(R.drawable.today_4, R.raw.today_4, TW),
+        Pic(R.drawable.today_4, R.raw.today_4, 1f),
     )
 
     /** 갤러리 11장 (Scenario.moments 순서와 같음) */
