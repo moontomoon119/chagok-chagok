@@ -459,8 +459,8 @@ class OverlayService : Service() {
         private val stop = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFE5574B.toInt() }
         private val back = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xE6101A24.toInt() }
         private val colors = intArrayOf(
-            0xFFFEDA77.toInt(), 0xFFF9AF4E.toInt(), 0xFFF58529.toInt(), 0xFFE95752.toInt(), 0xFFDD2A7B.toInt(),
-            0xFFAF2F95.toInt(), 0xFF8134AF.toInt(), 0xFF6947C1.toInt(), 0xFF515BD4.toInt(),
+            0xFFFFFFFF.toInt(), 0xFFFDF6EB.toInt(), 0xFFFCECD7.toInt(), 0xFFFAE2C3.toInt(), 0xFFF8D9AE.toInt(),
+            0xFFF7CF9A.toInt(), 0xFFF5C686.toInt(), 0xFFF4BD72.toInt(), 0xFFF2B35E.toInt(),
         )
         private val slate = 0xFF3A4756.toInt()
         private var rec = false

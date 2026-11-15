@@ -49,49 +49,45 @@ fun Panel(
     )
 }
 
+/** 작은 태그. 색을 늘어놓지 않도록 기본은 흰색 반투명, 위험(삭제)만 빨강 */
 @Composable
 fun Chip(text: String, color: Color, size: Int = 18) {
+    val c = if (color == Palette.Danger) color else Color.White
     Text(
         text,
-        color = color,
-        fontSize = size.sp,
-        fontWeight = FontWeight.SemiBold,
+        color = c.copy(alpha = 0.9f),
+        fontSize = size.sp * Type.scale,
+        fontWeight = FontWeight.Medium,
         modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(color.copy(alpha = 0.16f))
+            .background(c.copy(alpha = 0.12f))
             .padding(horizontal = 16.dp, vertical = 7.dp),
     )
 }
 
+/** 글자만으로 된 탭. 선택된 탭은 흰색 + 밑줄, 나머지는 흐린 흰색 */
 @Composable
 fun SubTabs(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, icons: List<Int>? = null) {
-    Row(
-        Modifier
-            .clip(RoundedCornerShape(50))
-            .background(Palette.Surface)
-            .padding(6.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
+    Row(horizontalArrangement = Arrangement.spacedBy(38.dp), verticalAlignment = Alignment.Bottom) {
         labels.forEachIndexed { i, l ->
             val on = i == selected
-            val c = if (on) Palette.Bg else Palette.TextDim
-            Row(
-                Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(if (on) Palette.Amber else Palette.Surface)
-                    .clickable { onSelect(i) }
-                    .padding(horizontal = 24.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Column(
+                Modifier.width(IntrinsicSize.Max).clip(RoundedCornerShape(8.dp)).clickable { onSelect(i) }.padding(horizontal = 4.dp, vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                icons?.getOrNull(i)?.let {
-                    AppIcon(it, c, 24.dp)
-                    Spacer(Modifier.width(9.dp))
-                }
                 Text(
                     l,
-                    color = c,
+                    color = Color.White.copy(alpha = if (on) 1f else 0.5f),
                     fontSize = Type.Body,
                     fontWeight = if (on) FontWeight.Bold else FontWeight.Medium,
+                )
+                Spacer(Modifier.height(8.dp))
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(if (on) Palette.Amber else Color.Transparent),
                 )
             }
         }
@@ -117,7 +113,7 @@ fun BigButton(
         colors = if (filled) {
             ButtonDefaults.buttonColors(containerColor = Palette.Amber, contentColor = Palette.Bg)
         } else {
-            ButtonDefaults.buttonColors(containerColor = Palette.SurfaceHi, contentColor = Palette.Text)
+            ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.12f), contentColor = Color.White)
         },
     ) {
         icon?.let {
@@ -131,7 +127,7 @@ fun BigButton(
 @Composable
 fun Stat(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = color, fontSize = Type.Title, fontWeight = FontWeight.Bold)
+        Text(value, color = Palette.Text, fontSize = Type.Title, fontWeight = FontWeight.Bold)
         Text(label, color = Palette.TextDim, fontSize = Type.Caption)
     }
 }
@@ -174,10 +170,10 @@ fun RenameBox(initial: String, presets: List<String>, onSave: (String) -> Unit, 
         }
         presets.forEach { p ->
             Text(
-                p, color = Palette.Sky, fontSize = Type.Label, fontWeight = FontWeight.SemiBold,
+                p, color = Color.White, fontSize = Type.Label, fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
-                    .background(Palette.Sky.copy(alpha = 0.14f))
+                    .background(Color.White.copy(alpha = 0.12f))
                     .clickable { text = p }
                     .padding(horizontal = 18.dp, vertical = 8.dp),
             )

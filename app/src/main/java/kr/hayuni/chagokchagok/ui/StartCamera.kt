@@ -98,7 +98,7 @@ fun StartScreen(onStart: () -> Unit) {
                 "달린 길마다,\n우리 가족 이야기가 차곡차곡.",
                 color = Color.White,
                 fontSize = Type.Display,
-                lineHeight = 92.sp,
+                lineHeight = Type.line(92),
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 style = TextStyle(shadow = softShadow),
@@ -153,14 +153,13 @@ fun CameraScreen(
     lastSeed: Int,
 ) {
     var toast by remember { mutableStateOf<String?>(null) }
-    var dur by remember { mutableIntStateOf(1) }
     var capturing by remember { mutableStateOf(false) }
     val progress = remember { Animatable(0f) }
     val flash = remember { Animatable(0f) }
 
     LaunchedEffect(capturing) {
         if (capturing) {
-            val ms = when (dur) { 1 -> 1000; 2 -> 1500; else -> 2300 }
+            val ms = 3000   // 데모에서는 5초를 3초로 압축해 보여 준다
             progress.snapTo(0f)
             progress.animateTo(1f, tween(ms, easing = LinearEasing))
             flash.snapTo(0.9f)
@@ -220,7 +219,7 @@ fun CameraScreen(
             Text("차가 지금 보고 있는 것", color = Color.White.copy(alpha = 0.75f), fontSize = Type.Caption)
             signals.forEach { (ic, k, v) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    AppIcon(ic, Palette.Mint, 38.dp)
+                    AppIcon(ic, Color.White.copy(alpha = 0.9f), 36.dp)
                     Spacer(Modifier.width(16.dp))
                     Text(k, color = Color.White, fontSize = Type.Subtitle, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.width(14.dp))
@@ -235,27 +234,10 @@ fun CameraScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                "버튼을 누르면 오늘의 기록이 쌓여요",
+                "누르면 5초가 오늘의 기록에 쌓여요",
                 color = Color.White, fontSize = Type.Body, style = TextStyle(shadow = softShadow),
             )
             Spacer(Modifier.height(18.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                listOf(5, 1, 2).forEach { d ->
-                    val on = d == dur
-                    Text(
-                        "${d}s",
-                        color = if (on) Color.Black else Color.White,
-                        fontSize = Type.Body,
-                        fontWeight = FontWeight.Bold,
-                        style = if (on) TextStyle.Default else TextStyle(shadow = softShadow),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(if (on) Color.White else Color.Transparent)
-                            .clickable(enabled = !capturing) { dur = d }
-                            .padding(horizontal = 24.dp, vertical = 8.dp),
-                    )
-                }
-            }
             Spacer(Modifier.height(20.dp))
             Shutter(capturing, progress.value) { if (!capturing) capturing = true }
         }
@@ -291,7 +273,7 @@ fun CameraScreen(
         // 저장 안내 (화면은 그대로)
         toast?.let {
             Text(
-                it, color = Palette.Mint, fontSize = Type.Subtitle, fontWeight = FontWeight.Bold,
+                it, color = Color.White, fontSize = Type.Subtitle, fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 44.dp)

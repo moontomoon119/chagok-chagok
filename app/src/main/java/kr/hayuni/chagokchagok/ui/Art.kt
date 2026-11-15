@@ -121,7 +121,7 @@ private fun DrawScope.cloud(cx: Float, cy: Float, r: Float, alpha: Float) {
 private fun DrawScope.tone() {
     val w = size.width
     val h = size.height
-    drawRect(Color(0xFF808080).copy(alpha = 0.26f), blendMode = BlendMode.Saturation)
+    drawRect(Color(0xFF808080).copy(alpha = 0.5f), blendMode = BlendMode.Saturation)
     drawRect(
         Brush.verticalGradient(
             listOf(Color(0xFF1A2342).copy(alpha = 0.26f), Color.Transparent, Color(0xFF4A2812).copy(alpha = 0.2f)),

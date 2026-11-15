@@ -140,7 +140,7 @@ fun ChagokApp(refreshTick: Int = 0, onQuickRecordChange: (Boolean) -> Unit = {},
                     val scenes = SceneKind.values()
                     clips.add(
                         TodayClip(
-                            id, SimpleDateFormat("HH:mm", Locale.KOREA).format(Date()), "방금 이 길", "1초 기록",
+                            id, SimpleDateFormat("HH:mm", Locale.KOREA).format(Date()), "방금 이 길", "5초 기록",
                             "방금 찍은 순간이에요. 눌러서 제목을 바꿔 보세요.", "방금", Palette.Mint.toArgb(),
                             scenes[id % scenes.size], id,
                         ),
@@ -209,21 +209,11 @@ private fun TopBar(
             .padding(horizontal = 44.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 왼쪽: 로고 + 화면 이동 (갤러리가 홈, 오늘의 기록은 거기서 들어가는 보조 화면)
-        Image(
-            painterResource(R.drawable.ic_launcher_foreground),
-            contentDescription = null,
-            modifier = Modifier.size(72.dp).offset(x = (-12).dp),
-        )
-        Text(
-            "차곡차곡", color = Palette.Text, fontSize = Type.Subtitle, fontWeight = FontWeight.Bold,
-            modifier = Modifier.offset(x = (-18).dp),
-        )
-        Spacer(Modifier.width(24.dp))
+        // 왼쪽: 글자 로고 + 화면 이동 (갤러리가 홈, 오늘의 기록은 거기서 들어가는 보조 화면)
         if (tab == 1) {
-            HeaderChip(Ico.Today, "오늘의 기록", Palette.Amber, badge = "$todayCount", tonal = true) { onTab(0) }
+            HeaderChip(Ico.Today, "오늘의 기록", badge = "$todayCount") { onTab(0) }
         } else {
-            HeaderChip(Ico.Back, "갤러리", Palette.Text) { onTab(1) }
+            HeaderChip(Ico.Back, "갤러리") { onTab(1) }
         }
 
         Spacer(Modifier.weight(1f))
@@ -242,27 +232,23 @@ private fun TopBar(
     }
 }
 
-/** 화면 이동용 알약 버튼 (tonal=true 이면 색을 깔아 한 단계 더 눈에 띄게) */
+/** 화면 이동 버튼: 테두리·색 없이 옅은 바탕에 흰 글자 */
 @Composable
-private fun HeaderChip(icon: Int, text: String, color: Color, badge: String? = null, tonal: Boolean = false, onClick: () -> Unit) {
+private fun HeaderChip(icon: Int, text: String, badge: String? = null, onClick: () -> Unit) {
     Row(
         Modifier
             .clip(RoundedCornerShape(50))
-            .background(if (tonal) color.copy(alpha = 0.14f) else Palette.Surface)
-            .border(1.5.dp, if (tonal) color.copy(alpha = 0.35f) else Palette.Line, RoundedCornerShape(50))
+            .background(Color.White.copy(alpha = 0.08f))
             .clickable(onClick = onClick)
-            .padding(start = 18.dp, end = if (badge != null) 12.dp else 22.dp, top = 9.dp, bottom = 9.dp),
+            .padding(horizontal = 22.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AppIcon(icon, color, 24.dp)
+        AppIcon(icon, Color.White.copy(alpha = 0.85f), 24.dp)
         Spacer(Modifier.width(10.dp))
-        Text(text, color = if (tonal) color else Palette.Text, fontSize = Type.Label, fontWeight = FontWeight.SemiBold)
+        Text(text, color = Color.White, fontSize = Type.Label, fontWeight = FontWeight.SemiBold)
         if (badge != null) {
             Spacer(Modifier.width(10.dp))
-            Text(
-                badge, color = Palette.Bg, fontSize = Type.Caption, fontWeight = FontWeight.Bold,
-                modifier = Modifier.clip(CircleShape).background(color).padding(horizontal = 11.dp, vertical = 2.dp),
-            )
+            Text(badge, color = Color.White.copy(alpha = 0.55f), fontSize = Type.Label, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -273,25 +259,24 @@ private fun IconCircle(icon: Int, selected: Boolean, onClick: () -> Unit) {
         Modifier
             .size(52.dp)
             .clip(CircleShape)
-            .background(if (selected) Palette.SurfaceHi else Palette.Surface)
-            .border(1.5.dp, if (selected) Palette.Amber.copy(alpha = 0.5f) else Palette.Line, CircleShape)
+            .background(if (selected) Color.White.copy(alpha = 0.12f) else Color.Transparent)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { AppIcon(icon, if (selected) Palette.Amber else Palette.TextDim, 26.dp) }
+    ) { AppIcon(icon, Color.White.copy(alpha = if (selected) 1f else 0.7f), 28.dp) }
 }
 
+/** 주차/주행 표시: 색 없이 흐린 흰색 (탭하면 전환 - 데모용) */
 @Composable
 private fun StatusChip(text: String, color: Color, icon: Int, onClick: () -> Unit) {
     Row(
         Modifier
             .clip(RoundedCornerShape(50))
-            .background(color.copy(alpha = 0.14f))
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AppIcon(icon, color, 22.dp)
+        AppIcon(icon, Color.White.copy(alpha = 0.6f), 22.dp)
         Spacer(Modifier.width(8.dp))
-        Text(text, color = color, fontSize = Type.Caption, fontWeight = FontWeight.SemiBold)
+        Text(text, color = Color.White.copy(alpha = 0.6f), fontSize = Type.Caption, fontWeight = FontWeight.Medium)
     }
 }

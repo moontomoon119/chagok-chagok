@@ -87,7 +87,7 @@ private fun RecallPage() {
             }
             Text(
                 "“3년 전 이 길에서\n뒷창문 두 개가 동시에 내려갔어요.\n그날 이야기 들려드릴까요?”",
-                color = Color.White, fontSize = Type.Headline, lineHeight = 70.sp,
+                color = Color.White, fontSize = Type.Headline, lineHeight = Type.line(70),
                 fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
             )
             if (!recalled) {
@@ -98,7 +98,7 @@ private fun RecallPage() {
             } else {
                 Text(
                     "「${Scenario.STORY_TITLE}」 — 안개등을 켠 의암호 길, 호수 바람이 들어오던 뒷창문. 그날 여섯 살 딸의 목소리가 이어서 나와요.",
-                    color = Palette.Mint, fontSize = Type.Subtitle, lineHeight = 38.sp, textAlign = TextAlign.Center,
+                    color = Color.White.copy(alpha = 0.85f), fontSize = Type.Subtitle, lineHeight = Type.line(38), textAlign = TextAlign.Center,
                 )
                 Chip("♪ 딸 목소리 재생", Palette.Amber, 22)
             }

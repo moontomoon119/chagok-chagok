@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -79,13 +80,13 @@ private fun PanelTitle(title: String, sub: String, icon: Int, tint: androidx.com
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape).background(tint.copy(alpha = 0.16f)),
+                Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.White.copy(alpha = 0.08f)),
                 contentAlignment = Alignment.Center,
-            ) { AppIcon(icon, tint, 26.dp) }
+            ) { AppIcon(icon, Color.White.copy(alpha = 0.85f), 26.dp) }
             Spacer(Modifier.width(16.dp))
             Text(title, color = Palette.Text, fontSize = Type.Subtitle, fontWeight = FontWeight.Bold)
         }
-        Text(sub, color = Palette.TextDim, fontSize = Type.Caption, lineHeight = 27.sp)
+        Text(sub, color = Palette.TextDim, fontSize = Type.Caption, lineHeight = Type.line(27))
     }
 }
 
@@ -106,8 +107,8 @@ private fun MovePanel(modifier: Modifier) {
             PanelTitle("기억 이사", "기록은 차가 아니라 가족 계정에 쌓여요. 새 차에 로그인하면 지도가 그대로 따라와요.", Ico.Map, Palette.Amber)
             Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
                 Stat("누적 거리", "%,d km".format((87412 * progress).roundToInt()), Palette.Amber)
-                Stat("이야기", "%d편".format((214 * progress).roundToInt()), Palette.Mint)
-                Stat("핀", "%,d개".format((1038 * progress).roundToInt()), Palette.Sky)
+                Stat("이야기", "%d편".format((214 * progress).roundToInt()), Palette.Text)
+                Stat("핀", "%,d개".format((1038 * progress).roundToInt()), Palette.Text)
                 LinearProgressIndicator(
                     progress = { progress },
                     modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)),
@@ -116,7 +117,7 @@ private fun MovePanel(modifier: Modifier) {
             }
             when {
                 !moving -> BigButton("새 현대차에 로그인 (데모)", { moving = true }, Modifier.fillMaxWidth(), height = 52.dp)
-                !done -> Text("가족지도를 새 차로 옮기는 중…", color = Palette.Mint, fontSize = Type.Body, fontWeight = FontWeight.SemiBold)
+                !done -> Text("가족지도를 새 차로 옮기는 중…", color = Palette.Amber, fontSize = Type.Body, fontWeight = FontWeight.SemiBold)
                 else -> Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Chip("이사 완료", Palette.Mint, 20)
                     BigButton("다시 보기", { moving = false; progress = 0f }, filled = false, height = 48.dp)
@@ -136,7 +137,7 @@ private fun QualityPanel(modifier: Modifier, quickRecord: Boolean, onQuickRecord
     var sel by remember { mutableStateOf(1) }
     Panel(modifier) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
-            PanelTitle("화질 설정", "1초 기록 영상의 화질을 골라요.", Ico.Vault, Palette.Sky)
+            PanelTitle("화질 설정", "5초 기록 영상의 화질을 골라요.", Ico.Vault, Palette.Sky)
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 options.forEachIndexed { i, (name, res, desc) ->
                     val on = i == sel
@@ -163,7 +164,7 @@ private fun QualityPanel(modifier: Modifier, quickRecord: Boolean, onQuickRecord
                 LinearProgressIndicator(
                     progress = { listOf(0.31f, 0.48f, 0.82f)[sel] },
                     modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)),
-                    color = Palette.Mint, trackColor = Palette.Line,
+                    color = Palette.Amber, trackColor = Palette.Line,
                 )
             }
         }
@@ -201,8 +202,8 @@ private fun ToggleRow(title: String, desc: String, checked: Boolean, locked: Boo
             onCheckedChange = onChange,
             enabled = !locked,
             colors = SwitchDefaults.colors(
-                checkedTrackColor = Palette.Mint, checkedThumbColor = Palette.Bg,
-                disabledCheckedTrackColor = Palette.Mint.copy(alpha = 0.5f), disabledCheckedThumbColor = Palette.Bg,
+                checkedTrackColor = Palette.Amber, checkedThumbColor = Palette.Bg,
+                disabledCheckedTrackColor = Palette.Amber.copy(alpha = 0.45f), disabledCheckedThumbColor = Palette.Bg,
             ),
         )
     }

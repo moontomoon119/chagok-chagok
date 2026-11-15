@@ -123,7 +123,7 @@ private fun MomentCard(m: Moment, onClick: () -> Unit) {
             )
         }
         Column(Modifier.align(Alignment.BottomStart).padding(18.dp)) {
-            Text(m.caption ?: m.title, color = Color.White, fontSize = Type.Body, fontWeight = FontWeight.Bold, lineHeight = 28.sp)
+            Text(m.caption ?: m.title, color = Color.White, fontSize = Type.Body, fontWeight = FontWeight.Bold, lineHeight = Type.line(28))
             Text(m.stampText() ?: "", color = Color.White.copy(alpha = 0.8f), fontSize = Type.Caption)
         }
     }
@@ -183,7 +183,7 @@ private fun MomentEditor(m: Moment, onChange: (Moment) -> Unit, onDelete: () -> 
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(m.title, color = Palette.Text, fontSize = Type.Title, lineHeight = 46.sp, fontWeight = FontWeight.Bold)
+                    Text(m.title, color = Palette.Text, fontSize = Type.Title, lineHeight = Type.line(46), fontWeight = FontWeight.Bold)
                     Text(if (renaming) "제목을 바꾸는 중" else "편집", color = Palette.TextDim, fontSize = Type.Label)
                 }
                 if (renaming) {
@@ -223,7 +223,7 @@ private fun EditAction(label: String, value: String, color: Color, icon: Int, on
             .padding(horizontal = 24.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AppIcon(icon, color, 26.dp)
+        AppIcon(icon, if (color == Palette.Danger) color else Color.White.copy(alpha = 0.8f), 26.dp)
         Spacer(Modifier.width(14.dp))
         Text(label, color = Palette.Text, fontSize = Type.Body, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         Chip(value, color, 18)
@@ -252,7 +252,7 @@ fun VideoVault() {
                 )
                 Text(
                     "Android/data/kr.hayuni.chagokchagok/files/Movies",
-                    color = Palette.Mint, fontSize = Type.Body,
+                    color = Color.White.copy(alpha = 0.7f), fontSize = Type.Body,
                 )
                 Text("파일 이름을 road.mp4 로 하면 카메라 화면 배경으로 반복 재생돼요.", color = Palette.TextDim, fontSize = Type.Label)
                 Spacer(Modifier.height(8.dp))

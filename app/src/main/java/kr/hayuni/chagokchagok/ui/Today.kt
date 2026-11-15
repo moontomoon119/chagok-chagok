@@ -10,7 +10,12 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -71,7 +76,7 @@ fun TodayScreen(
             .padding(start = 44.dp, end = 44.dp, top = 8.dp, bottom = 28.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            SubTabs(labels, cur, { sub = it }, icons = listOf(Ico.Record, Ico.Mic, Ico.Book))
+            SubTabs(labels, cur, { sub = it })
             Spacer(Modifier.weight(1f))
             if (replaying) {
                 val a by rememberInfiniteTransition(label = "dot").animateFloat(
@@ -80,19 +85,29 @@ fun TodayScreen(
                 Box(Modifier.size(16.dp).clip(CircleShape).background(Palette.Danger.copy(alpha = a)))
                 Spacer(Modifier.width(10.dp))
                 Text("기록 중", color = Palette.Text, fontSize = Type.Body, fontWeight = FontWeight.Bold)
-            } else if (cur == 0 && clips.isNotEmpty()) {
-                Chip("오늘의 순간 ${clips.size}개", Palette.Mint, 18)
-            }
-            if (clips.isNotEmpty()) {
-                Spacer(Modifier.width(20.dp))
-                BigButton("하루 자동 재생", onReplay, enabled = !replaying, filled = false, icon = Ico.Play, height = 48.dp)
+            } else if (clips.isNotEmpty()) {
+                if (cur == 0) {
+                    Text("카드를 길게 누르면 삭제", color = Color.White.copy(alpha = 0.4f), fontSize = Type.Caption)
+                    Spacer(Modifier.width(24.dp))
+                }
+                Row(
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .clickable(onClick = onReplay)
+                        .padding(horizontal = 18.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AppIcon(Ico.Play, Color.White.copy(alpha = 0.75f), 22.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("하루 자동 재생", color = Color.White.copy(alpha = 0.75f), fontSize = Type.Label, fontWeight = FontWeight.Medium)
+                }
             }
         }
         Spacer(Modifier.height(22.dp))
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (cur) {
                 0 -> Filmstrip(clips, visible, replaying, onCamera, onRename, onDelete, onRestoreDemo)
-                1 -> VoicePage()
+                1 -> VoicePage(clips)
                 else -> StoryPage()
             }
         }
@@ -101,6 +116,7 @@ fun TodayScreen(
 
 // ───────────────────────── 오늘 기록: 1초 클립 필름 ─────────────────────────
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun Filmstrip(
     all: List<TodayClip>,
@@ -113,6 +129,7 @@ private fun Filmstrip(
 ) {
     val state = rememberLazyListState()
     var openId by remember { mutableStateOf<Int?>(null) }
+    var deleteId by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(visible.size) { if (visible.isNotEmpty()) state.animateScrollToItem((visible.size - 1).coerceAtLeast(0)) }
 
     if (all.isEmpty()) {
@@ -156,49 +173,67 @@ private fun Filmstrip(
                             scaleX = sc; scaleY = sc
                         }
                         .clip(RoundedCornerShape(32.dp))
-                        .clickable(enabled = !replaying) { openId = e.id },
+                        .combinedClickable(enabled = !replaying, onClick = { openId = e.id }, onLongClick = { deleteId = e.id }),
                 ) {
                     ClipArt(e, Modifier.fillMaxSize(), sound = false)
+                    // 글자는 모두 흰색. 그림과 글자는 그라데이션으로만 나눈다 (위는 시각, 아래는 내용)
                     Box(
                         Modifier
                             .fillMaxSize()
-                            .background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.78f))),
+                            .background(
+                                Brush.verticalGradient(
+                                    0f to Color.Black.copy(alpha = 0.38f),
+                                    0.28f to Color.Transparent,
+                                    0.5f to Color.Transparent,
+                                    1f to Color.Black.copy(alpha = 0.86f),
+                                ),
+                            ),
                     )
                     Text(
                         e.time,
-                        color = Color.White, fontSize = Type.Body, fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(22.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Color.Black.copy(alpha = 0.45f))
-                            .padding(horizontal = 18.dp, vertical = 8.dp),
-                    )
-                    Text(
-                        if (e.media == null) "1s" else "5s",
-                        color = Color.White, fontSize = Type.Label, fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(22.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Color.Black.copy(alpha = 0.45f))
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = Color.White.copy(alpha = 0.9f), fontSize = Type.Label, fontWeight = FontWeight.Medium,
+                        modifier = Modifier.align(Alignment.TopStart).padding(start = 30.dp, top = 28.dp),
                     )
                     Column(
-                        Modifier.align(Alignment.BottomStart).padding(28.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        Modifier.align(Alignment.BottomStart).padding(horizontal = 30.dp, vertical = 32.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Chip(e.tag, color, 18)
+                        Text(e.tag, color = Color.White.copy(alpha = 0.7f), fontSize = Type.Caption)
                         Text(e.place, color = Color.White, fontSize = Type.Title, fontWeight = FontWeight.Bold)
-                        Text(e.title, color = color, fontSize = Type.Body, fontWeight = FontWeight.SemiBold)
-                        Text(e.detail, color = Color.White.copy(alpha = 0.85f), fontSize = Type.Caption, lineHeight = 27.sp)
+                        Text(e.title, color = Color.White.copy(alpha = 0.92f), fontSize = Type.Body, fontWeight = FontWeight.Medium)
+                        Text(e.detail, color = Color.White.copy(alpha = 0.65f), fontSize = Type.Caption, lineHeight = Type.line(27))
                     }
                 }
             }
         }
-        val open = all.firstOrNull { it.id == openId }
-        if (open != null) {
-            ClipViewer(open, onClose = { openId = null }, onRename = onRename, onDelete = onDelete)
+        if (openId != null) {
+            ClipViewer(all, openId!!, onClose = { openId = null }, onRename = onRename)
+        }
+        val del = all.firstOrNull { it.id == deleteId }
+        if (del != null) {
+            // 삭제는 보기 화면이 아니라 카드를 길게 눌렀을 때만 나온다
+            Box(
+                Modifier.fillMaxSize().background(Palette.Bg.copy(alpha = 0.92f)).clickable { deleteId = null },
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    Modifier.clip(RoundedCornerShape(32.dp)).background(Palette.Surface).clickable(enabled = false) {}.padding(horizontal = 64.dp, vertical = 48.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text("이 순간을 삭제할까요?", color = Color.White, fontSize = Type.Subtitle, fontWeight = FontWeight.Bold)
+                    Text("${del.time} · ${del.place} · 되돌릴 수 없어요", color = Color.White.copy(alpha = 0.6f), fontSize = Type.Label)
+                    Spacer(Modifier.height(18.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Box(
+                            Modifier.height(52.dp).clip(RoundedCornerShape(50)).background(Palette.Danger)
+                                .clickable { onDelete(del.id); deleteId = null }.padding(horizontal = 40.dp),
+                            contentAlignment = Alignment.Center,
+                        ) { Text("삭제", color = Color.White, fontSize = Type.Body, fontWeight = FontWeight.Bold) }
+                        BigButton("취소", { deleteId = null }, filled = false, height = 52.dp)
+                    }
+                }
+            }
         }
     }
 }
@@ -243,21 +278,42 @@ private fun AudioPlayback(file: java.io.File) {
     }
 }
 
-/** 카드를 누르면 열리는 보기: 클립 다시보기 + 제목 수정 + 삭제 */
+/** 좌우로 밀어서 넘기기 */
+private fun Modifier.swipeNav(key: Any, onPrev: () -> Unit, onNext: () -> Unit): Modifier = pointerInput(key) {
+    var total = 0f
+    detectHorizontalDragGestures(
+        onDragStart = { total = 0f },
+        onDragEnd = { if (total > 140f) onPrev() else if (total < -140f) onNext() },
+    ) { _, dx -> total += dx }
+}
+
 @Composable
-private fun ClipViewer(clip: TodayClip, onClose: () -> Unit, onRename: (Int, String) -> Unit, onDelete: (Int) -> Unit) {
+private fun NavArrow(icon: Int, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier.size(64.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f)).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { AppIcon(icon, Color.White, 32.dp) }
+}
+
+/**
+ * 카드를 누르면 열리는 보기. 갤러리처럼 좌우로 밀거나 화살표로 하나씩 넘겨 본다.
+ * 화면을 누르면 처음부터 다시 보기, 오른쪽 위 ×(또는 바깥)로 닫기. 삭제는 카드를 길게 눌러서만 한다.
+ */
+@Composable
+private fun ClipViewer(clips: List<TodayClip>, startId: Int, onClose: () -> Unit, onRename: (Int, String) -> Unit) {
+    var index by remember { mutableIntStateOf(clips.indexOfFirst { it.id == startId }.coerceAtLeast(0)) }
+    val i = index.coerceIn(0, clips.lastIndex)
+    val clip = clips[i]
     var playKey by remember { mutableIntStateOf(0) }
-    var playing by remember { mutableStateOf(true) }
     var editing by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
     val prog = remember { Animatable(0f) }
-    LaunchedEffect(playKey) {
-        playing = true
+    // 모든 오늘 기록은 5초
+    LaunchedEffect(clip.id, playKey) {
         prog.snapTo(0f)
-        prog.animateTo(1f, tween(if (clip.media != null) 5000 else 1000, easing = LinearEasing))
-        playing = false
+        prog.animateTo(1f, tween(5000, easing = LinearEasing))
     }
-    val color = Color(clip.color)
+    LaunchedEffect(clip.id) { editing = false }
+    fun go(d: Int) { val n = i + d; if (n in clips.indices) index = n }
 
     Box(
         Modifier
@@ -273,10 +329,16 @@ private fun ClipViewer(clip: TodayClip, onClose: () -> Unit, onRename: (Int, Str
                 .background(Palette.Surface)
                 .clickable(enabled = false) {},
         ) {
-            // 1초 클립 재생: 장면이 천천히 다가오고 진행 막대가 찬다
-            Box(Modifier.width(880.dp).fillMaxHeight().clipToBounds()) {
+            Box(
+                Modifier
+                    .width(880.dp)
+                    .fillMaxHeight()
+                    .clipToBounds()
+                    .swipeNav(i, { go(-1) }, { go(1) })
+                    .clickable { playKey++ },
+            ) {
                 if (clip.media != null) {
-                    key(playKey) { ClipArt(clip, Modifier.fillMaxSize(), sound = true) }
+                    key(clip.id, playKey) { ClipArt(clip, Modifier.fillMaxSize(), sound = true) }
                 } else {
                     SceneArt(
                         clip.scene,
@@ -290,34 +352,41 @@ private fun ClipViewer(clip: TodayClip, onClose: () -> Unit, onRename: (Int, Str
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
                         .padding(24.dp)
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
                         .background(Color.White.copy(alpha = 0.25f)),
                 ) {
                     Box(Modifier.fillMaxHeight().fillMaxWidth(prog.value).background(Color.White))
                 }
                 Text(
-                    clip.time, color = Color.White, fontSize = Type.Subtitle, fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(start = 28.dp, top = 56.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.Black.copy(alpha = 0.45f))
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    clip.time, color = Color.White.copy(alpha = 0.9f), fontSize = Type.Body, fontWeight = FontWeight.Medium,
+                    modifier = Modifier.align(Alignment.TopStart).padding(start = 36.dp, top = 60.dp),
+                )
+                Text(
+                    "${i + 1} / ${clips.size}", color = Color.White.copy(alpha = 0.7f), fontSize = Type.Body,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(end = 36.dp, top = 60.dp),
                 )
                 Column(Modifier.align(Alignment.BottomStart).padding(36.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(clip.place, color = Color.White, fontSize = Type.Headline, fontWeight = FontWeight.Bold)
-                    Text(clip.title, color = color, fontSize = Type.Subtitle, fontWeight = FontWeight.SemiBold)
+                    Text(clip.title, color = Color.White.copy(alpha = 0.92f), fontSize = Type.Subtitle, fontWeight = FontWeight.Medium)
                 }
+                if (i > 0) NavArrow(Ico.Back, Modifier.align(Alignment.CenterStart).padding(start = 20.dp)) { go(-1) }
+                if (i < clips.lastIndex) NavArrow(Ico.Next, Modifier.align(Alignment.CenterEnd).padding(end = 20.dp)) { go(1) }
             }
-            // 오른쪽: 정보와 도구
+            // 오른쪽: 정보와 편집
             Column(
                 Modifier.width(560.dp).fillMaxHeight().padding(40.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Chip(clip.tag, color, 20)
-                    Text(clip.detail, color = Palette.TextDim, fontSize = Type.Body, lineHeight = 34.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(clip.tag, color = Color.White.copy(alpha = 0.6f), fontSize = Type.Label, modifier = Modifier.weight(1f))
+                        Box(
+                            Modifier.size(48.dp).clip(CircleShape).clickable(onClick = onClose),
+                            contentAlignment = Alignment.Center,
+                        ) { AppIcon(Ico.Close, Color.White.copy(alpha = 0.8f), 28.dp) }
+                    }
+                    Text(clip.detail, color = Palette.TextDim, fontSize = Type.Body, lineHeight = Type.line(34))
                     if (editing) {
                         Spacer(Modifier.height(6.dp))
                         RenameBox(
@@ -329,100 +398,101 @@ private fun ClipViewer(clip: TodayClip, onClose: () -> Unit, onRename: (Int, Str
                     }
                 }
                 if (!editing) {
-                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        ViewerAction("다시보기", if (playing) "재생 중…" else if (clip.media != null) "▶ 5초" else "▶ 1초", Palette.Mint, enabled = !playing) { playKey++ }
-                        ViewerAction("제목", "수정", Palette.Amber) { editing = true; confirmDelete = false }
-                        if (!confirmDelete) {
-                            ViewerAction("이 순간", "삭제", Palette.Danger) { confirmDelete = true }
-                        } else {
-                            Text("정말 삭제할까요? 되돌릴 수 없어요.", color = Palette.Danger, fontSize = Type.Body, fontWeight = FontWeight.SemiBold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                BigButton("삭제", { onDelete(clip.id); onClose() })
-                                BigButton("취소", { confirmDelete = false }, filled = false)
-                            }
-                        }
-                        BigButton("닫기", onClose, Modifier.fillMaxWidth(), filled = false)
-                    }
+                    // TODO(추후 개발): "편집"은 이 앱의 메인 기능으로 키울 자리다. 지금은 제목 수정만 된다.
+                    //  - 5초 중 보여 줄 구간 고르기(자르기)
+                    //  - 글귀·스티커·타임스탬프 얹기
+                    //  - 배경 음악 / 아이 목소리 더하기
+                    //  - 가족에게 공유, 갤러리(모아보기)로 보내기
+                    // 그래서 이 화면의 버튼은 "편집" 하나만 크게 둔다 (삭제는 카드 길게 누르기, 닫기는 ×).
+                    BigButton("편집", { editing = true }, Modifier.fillMaxWidth(), icon = Ico.Edit, height = 68.dp)
                 }
             }
         }
     }
 }
 
-@Composable
-private fun ViewerAction(label: String, value: String, color: Color, enabled: Boolean = true, onClick: () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Palette.SurfaceHi)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 18.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(label, color = Palette.Text, fontSize = Type.Body, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-        Chip(value, color, 20)
-    }
-}
-
 // ───────────────────────── 한마디 ─────────────────────────
 
+/**
+ * 한마디: 오늘의 모든 기록마다 "여기 어땠어요?"를 물을 수 있다.
+ * 좌우로 밀거나 화살표로 기록을 고르고, 대답하고 싶은 기록에서만 대답한다 (건너뛰어도 된다).
+ */
 @Composable
-private fun VoicePage() {
-    var phase by remember { mutableIntStateOf(0) } // 0 질문 / 1 듣는 중 / 2 저장됨
+private fun VoicePage(clips: List<TodayClip>) {
+    if (clips.isEmpty()) return
+    var index by remember { mutableIntStateOf(0) }
+    val i = index.coerceIn(0, clips.lastIndex)
+    val clip = clips[i]
+    val answers = remember { mutableStateMapOf<Int, String>() }   // 기록 id -> 받아 적은 대답 (데모)
+    var listening by remember { mutableStateOf(false) }
     var chars by remember { mutableIntStateOf(0) }
-    LaunchedEffect(phase) {
-        if (phase == 1) {
+    LaunchedEffect(clip.id, listening) {
+        if (listening) {
             chars = 0
             while (chars < Scenario.ANSWER.length) { delay(90); chars++ }
-            delay(500)
-            phase = 2
+            delay(400)
+            answers[clip.id] = Scenario.ANSWER
+            listening = false
         }
     }
+    LaunchedEffect(i) { listening = false }
+    fun go(d: Int) { val n = i + d; if (n in clips.indices) index = n }
+    val answer = answers[clip.id]
 
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
         Box(
             Modifier
                 .weight(1.2f)
                 .fillMaxHeight()
-                .clip(RoundedCornerShape(32.dp)),
+                .clip(RoundedCornerShape(32.dp))
+                .swipeNav(i, { go(-1) }, { go(1) }),
         ) {
-            SceneArt(SceneKind.Cable, Modifier.fillMaxSize(), seed = 3)
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.42f)))
+            ClipArt(clip, Modifier.fillMaxSize(), sound = false)
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
             Column(
-                Modifier.fillMaxSize().padding(40.dp),
+                Modifier.fillMaxSize().padding(horizontal = 96.dp, vertical = 40.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("12:45 · 춘천 케이블카", color = Color.White.copy(alpha = 0.85f), fontSize = Type.Body)
-                Column {
-                    Text("“${Scenario.QUESTION}”", color = Color.White, fontSize = Type.Display, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(28.dp))
-                    Wave(active = phase == 1)
+                Row {
+                    Text("${clip.time} · ${clip.place}", color = Color.White.copy(alpha = 0.85f), fontSize = Type.Body, modifier = Modifier.weight(1f))
+                    Text("${i + 1} / ${clips.size}", color = Color.White.copy(alpha = 0.6f), fontSize = Type.Body)
                 }
-                when (phase) {
-                    0 -> BigButton("여섯 살 딸이 대답해요", { phase = 1 }, icon = Ico.Mic, height = 52.dp)
-                    1 -> Text("듣고 있어요…", color = Palette.Mint, fontSize = Type.Subtitle, fontWeight = FontWeight.SemiBold)
-                    else -> BigButton("다시 보기", { phase = 0 }, filled = false, height = 48.dp)
+                Column {
+                    Text(Scenario.QUESTION, color = Color.White, fontSize = Type.Display, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(28.dp))
+                    Wave(active = listening)
+                }
+                when {
+                    listening -> Text("듣고 있어요…", color = Palette.Amber, fontSize = Type.Subtitle, fontWeight = FontWeight.SemiBold)
+                    answer == null -> BigButton("대답하기", { listening = true }, icon = Ico.Mic, height = 52.dp)
+                    else -> BigButton("다시 대답하기", { listening = true }, filled = false, icon = Ico.Mic, height = 48.dp)
                 }
             }
+            if (i > 0) NavArrow(Ico.Back, Modifier.align(Alignment.CenterStart).padding(start = 20.dp)) { go(-1) }
+            if (i < clips.lastIndex) NavArrow(Ico.Next, Modifier.align(Alignment.CenterEnd).padding(end = 20.dp)) { go(1) }
         }
         Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(22.dp)) {
             Panel(Modifier.fillMaxWidth().weight(1f), fill = Palette.SurfaceHi) {
                 Column {
-                    Chip("글로 받아 적기", Palette.Sky, 18)
+                    Chip("글로 받아 적기", Color.White, 18)
                     Spacer(Modifier.height(18.dp))
                     Text(
-                        if (phase == 0) "대답을 기다리고 있어요." else "“${Scenario.ANSWER.take(chars)}”",
-                        color = Palette.Text, fontSize = Type.Title, lineHeight = 48.sp,
+                        when {
+                            listening -> "“${Scenario.ANSWER.take(chars)}”"
+                            answer != null -> "“$answer”"
+                            else -> "대답하고 싶은 기록에서만 대답해요. 밀어서 다른 기록으로 넘어갈 수 있어요."
+                        },
+                        color = if (answer == null && !listening) Color.White.copy(alpha = 0.6f) else Palette.Text,
+                        fontSize = Type.Title, lineHeight = Type.line(48),
                     )
                 }
             }
             Panel(Modifier.fillMaxWidth()) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Chip(if (phase == 2) "목소리로도 저장됨" else "목소리 저장 대기", Palette.Mint, 18)
+                    Chip(if (answer != null) "목소리로도 저장됨" else "목소리 저장 대기", Color.White, 18)
                     Text(
                         "늘 녹음하지 않아요. 차가 물었을 때만 녹음하고, 아이 목소리 원본은 보호자가 켜야만 보관해요.",
-                        color = Palette.TextDim, fontSize = Type.Label, lineHeight = 30.sp,
+                        color = Palette.TextDim, fontSize = Type.Label, lineHeight = Type.line(30),
                     )
                 }
             }
@@ -471,7 +541,7 @@ private fun StoryPage() {
         Column(Modifier.align(Alignment.TopStart).padding(40.dp)) {
             Text("15:20 · 집까지 1시간 35분 남았어요", color = Color.White.copy(alpha = 0.85f), fontSize = Type.Body)
             Spacer(Modifier.height(6.dp))
-            Text("「${Scenario.STORY_TITLE}」", color = Palette.Amber, fontSize = Type.Title, fontWeight = FontWeight.Bold)
+            Text("「${Scenario.STORY_TITLE}」", color = Color.White, fontSize = Type.Title, fontWeight = FontWeight.Bold)
         }
 
         Crossfade(targetState = cur, modifier = Modifier.align(Alignment.Center), label = "story") { idx ->
@@ -482,8 +552,8 @@ private fun StoryPage() {
             ) {
                 if (idx < 0) {
                     Text(
-                        "“오늘 이야기\n들려드릴까요?”",
-                        color = Color.White, fontSize = Type.Display, lineHeight = 90.sp,
+                        "오늘, 우리의 이야기\n들어볼까요?",
+                        color = Color.White, fontSize = Type.Display, lineHeight = Type.line(90),
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
                     )
                 } else {
@@ -496,7 +566,7 @@ private fun StoryPage() {
                     }
                     Text(
                         line.text,
-                        color = Color.White, fontSize = Type.Headline, lineHeight = 70.sp,
+                        color = Color.White, fontSize = Type.Headline, lineHeight = Type.line(70),
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
