@@ -22,6 +22,22 @@ object Palette {
     val Danger = Color(0xFFE57373)
 }
 
+/** 코드로 그리는 장면 일러스트 종류 (실제 사진 대신 쓰는 시안용 이미지) */
+enum class SceneKind { LakeFog, Cable, Highway, Sunset, Rain, Meadow, Autumn }
+
+/** 갤러리에 흩뿌려 놓는 "순간" 카드 */
+data class Moment(
+    val scene: SceneKind,
+    val seed: Int,
+    val title: String,
+    val date: String,
+    val quote: String,
+    val x: Int, val y: Int, val w: Int, val h: Int, val rot: Float,
+    val badge: String? = null,
+    val stamp: Int = 1,              // 0 끔 / 1 날짜 / 2 날짜+시각
+    val caption: String? = null,     // 편집으로 바꾼 글귀
+)
+
 data class TimelineEvent(
     val time: String,
     val place: String,
@@ -56,6 +72,23 @@ object Scenario {
         TimelineEvent("10:05", "의암호 길", "안개 속을 달림", "안개등이 켜지고 뒷창문 두 개가 3분쯤 내려갔어요", "안개등 · 창문", Palette.Amber),
         TimelineEvent("12:45", "춘천 케이블카", "한마디 남김", "다시 탑승하자 차가 물었어요. “여기 어땠어요?”", "한마디", Palette.Lilac),
         TimelineEvent("15:20", "귀갓길", "집으로 출발", "목적지를 집으로 바꾸자 차가 하루를 읽어 줄 준비를 해요", "귀갓길", Palette.Mint),
+    )
+
+    /** events 와 같은 순서의 장면 */
+    val eventScenes = listOf(SceneKind.Meadow, SceneKind.Highway, SceneKind.LakeFog, SceneKind.Cable, SceneKind.Sunset)
+
+    val moments = listOf(
+        Moment(SceneKind.LakeFog, 0, "안개가 먼저 와 있던 날", "2026.10.17", "안개등을 켠 의암호 길", 30, 40, 290, 400, -3f, "1s"),
+        Moment(SceneKind.Highway, 1, "가평휴게소 18분", "2026.10.17", "문 네 개가 열렸다 닫혔어요", 330, 20, 230, 190, 4f),
+        Moment(SceneKind.Cable, 2, "케이블카가 호수 위를 날았어", "2026.10.17", "“물고기가 우리 봤을까?”", 340, 250, 260, 350, 2.5f, "♪ 딸 목소리"),
+        Moment(SceneKind.Sunset, 3, "집으로 가는 길", "2026.10.17", "집까지 1시간 35분", 650, 50, 330, 430, -2f),
+        Moment(SceneKind.Meadow, 4, "양평 들판", "2026.05.05", "처음으로 맨발로 뛰었던 날", 1010, 20, 230, 230, -4f),
+        Moment(SceneKind.Rain, 5, "비 오던 송도", "2026.07.12", "창문을 닫고 노래를 불렀어요", 1020, 280, 260, 330, 3f, "1s"),
+        Moment(SceneKind.Autumn, 6, "3년 전 가을", "2023.10.28", "뒷창문 두 개가 동시에 내려갔어요", 1300, 70, 300, 400, 2f),
+        Moment(SceneKind.Meadow, 7, "등원길 아침", "2026.09.02", "오늘은 손을 흔들어 줬어요", 1650, 220, 250, 340, -2.5f),
+        Moment(SceneKind.Sunset, 8, "퇴근길 노을", "2026.09.20", "라디오에서 좋아하는 노래가 나왔어요", 1640, 20, 260, 190, 3f),
+        Moment(SceneKind.Cable, 9, "첫 바다", "2025.08.03", "파도 소리를 처음 들은 날", 1950, 60, 300, 410, -3f, "♪ 딸 목소리"),
+        Moment(SceneKind.Autumn, 10, "할머니 댁 가는 길", "2025.11.09", "감나무가 주황색이었어요", 2290, 170, 260, 350, 2.5f),
     )
 
     const val QUESTION = "여기 어땠어요?"
