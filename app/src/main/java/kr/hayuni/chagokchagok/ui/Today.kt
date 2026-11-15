@@ -355,7 +355,12 @@ private fun ClipViewer(clips: List<TodayClip>, startId: Int, onClose: () -> Unit
                         .clip(RoundedCornerShape(3.dp))
                         .background(Color.White.copy(alpha = 0.25f)),
                 ) {
-                    Box(Modifier.fillMaxHeight().fillMaxWidth(prog.value).background(Color.White))
+                    // 진행 막대는 그리기 단계에서만 값을 읽어, 프레임마다 화면 전체를 다시 구성하지 않게 한다
+                    Box(
+                        Modifier.fillMaxSize()
+                            .graphicsLayer { scaleX = prog.value; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f) }
+                            .background(Color.White),
+                    )
                 }
                 Text(
                     clip.time, color = Color.White.copy(alpha = 0.9f), fontSize = Type.Body, fontWeight = FontWeight.Medium,

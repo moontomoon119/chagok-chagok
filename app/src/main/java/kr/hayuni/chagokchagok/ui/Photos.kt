@@ -4,13 +4,21 @@ import android.net.Uri
 import android.widget.VideoView
 import androidx.annotation.DrawableRes
 import androidx.annotation.RawRes
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.viewinterop.AndroidView
@@ -29,26 +37,26 @@ object Photos {
 
     /** 오늘의 기록 5장 (시나리오 순서: 우리 집 → 가평휴게소 → 의암호 길 → 춘천 케이블카 → 노을). 6번째 "집 가는 중"은 카메라 도로(Road) */
     val today = listOf(
-        Pic(R.drawable.today_0, R.raw.today_0, 4f / 3f),
-        Pic(R.drawable.today_1, R.raw.today_1, GAPYEONG),
-        Pic(R.drawable.today_2, R.raw.today_2, TW),
-        Pic(R.drawable.today_3, R.raw.today_3, TW),
-        Pic(R.drawable.today_4, R.raw.today_4, 1f),
+        Pic(R.drawable.today_0, null, 4f / 3f),
+        Pic(R.drawable.today_1, null, GAPYEONG),
+        Pic(R.drawable.today_2, null, TW),
+        Pic(R.drawable.today_3, null, TW),
+        Pic(R.drawable.today_4, null, 1f),
     )
 
     /** 갤러리 11장 (Scenario.moments 순서와 같음) */
     val gallery = listOf(
-        Pic(R.drawable.gallery_0, R.raw.gallery_0, 1080f / 1490f),
-        Pic(R.drawable.gallery_1, R.raw.gallery_1, GAPYEONG),
-        Pic(R.drawable.gallery_2, R.raw.gallery_2, 1080f / 1454f),
-        Pic(R.drawable.gallery_3, R.raw.gallery_3, 1080f / 1408f),
-        Pic(R.drawable.gallery_4, R.raw.gallery_4, 1f),
-        Pic(R.drawable.gallery_5, R.raw.gallery_5, 1080f / 1370f),
-        Pic(R.drawable.gallery_6, R.raw.gallery_6, 1080f / 1440f),
-        Pic(R.drawable.gallery_7, R.raw.gallery_7, 1080f / 1468f),
-        Pic(R.drawable.gallery_8, R.raw.gallery_8, 1080f / 790f),
-        Pic(R.drawable.gallery_9, R.raw.gallery_9, 1080f / 1476f),
-        Pic(R.drawable.gallery_10, R.raw.gallery_10, 1080f / 1454f),
+        Pic(R.drawable.gallery_0, null, 1080f / 1490f),
+        Pic(R.drawable.gallery_1, null, GAPYEONG),
+        Pic(R.drawable.gallery_2, null, 1080f / 1454f),
+        Pic(R.drawable.gallery_3, null, 1080f / 1408f),
+        Pic(R.drawable.gallery_4, null, 1f),
+        Pic(R.drawable.gallery_5, null, 1080f / 1370f),
+        Pic(R.drawable.gallery_6, null, 1080f / 1440f),
+        Pic(R.drawable.gallery_7, null, 1080f / 1468f),
+        Pic(R.drawable.gallery_8, null, 1080f / 790f),
+        Pic(R.drawable.gallery_9, null, 1080f / 1476f),
+        Pic(R.drawable.gallery_10, null, 1080f / 1454f),
     )
 
     val start = Pic(R.drawable.start_bg, null, 16f / 9f)
@@ -82,7 +90,7 @@ fun PhotoArt(pic: Pic, modifier: Modifier = Modifier) {
 @Composable
 fun PhotoVideo(pic: Pic, modifier: Modifier = Modifier, muted: Boolean = true) {
     val vid = pic.vid
-    if (vid == null) { PhotoArt(pic, modifier); return }
+    if (vid == null) { ZoomPhoto(pic, modifier); return }
     BoxWithConstraints(modifier.clipToBounds(), contentAlignment = Alignment.Center) {
         val w = maxOf(maxWidth, maxHeight * pic.aspect)
         val h = maxOf(maxHeight, maxWidth / pic.aspect)
@@ -101,4 +109,16 @@ fun PhotoVideo(pic: Pic, modifier: Modifier = Modifier, muted: Boolean = true) {
             },
         )
     }
+}
+
+/**
+ * 사진을 천천히 확대했다 줄이기를 반복한다. 앱이 직접 그려서(그래픽 레이어 확대) 영상보다 부드럽다.
+ * (원래 3초 확대 영상이었는데, 에뮬레이터에서 영상 재생이 뚝뚝 끊겨 보여서 이 방식으로 바꿨다.)
+ */
+@Composable
+fun ZoomPhoto(pic: Pic, modifier: Modifier = Modifier) {
+    val zoom by rememberInfiniteTransition(label = "zoom").animateFloat(
+        1f, 1.12f, infiniteRepeatable(tween(6000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "z",
+    )
+    PhotoArt(pic, modifier.graphicsLayer { scaleX = zoom; scaleY = zoom })
 }
