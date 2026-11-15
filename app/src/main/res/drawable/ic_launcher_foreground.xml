@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 굽이진 길 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#F2B35E"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="7"
+        android:pathData="M32,74 C44,74 40,56 54,54 C68,52 62,36 76,34" />
+    <!-- 핀 -->
+    <path
+        android:fillColor="#6FCFB3"
+        android:pathData="M76,26 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <path
+        android:fillColor="#EAF0F6"
+        android:pathData="M32,74 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+</vector>

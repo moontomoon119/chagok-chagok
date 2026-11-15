@@ -1,0 +1,16 @@
+# build output
+*.iml
+.gradle/
+build/
+.idea/
+.kotlin/
+
+# secrets / local config  (절대 커밋 금지)
+local.properties
+keystore.properties
+*.jks
+*.keystore
+
+# OS
+.DS_Store
+Thumbs.db
