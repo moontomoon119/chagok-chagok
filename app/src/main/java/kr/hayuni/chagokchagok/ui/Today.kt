@@ -247,7 +247,7 @@ private fun ClipArt(clip: TodayClip, modifier: Modifier, sound: Boolean) {
     val path = clip.media
     val file = remember(path) { path?.let { java.io.File(it) } }
     when {
-        file == null || !file.exists() -> SceneArt(clip.scene, modifier, seed = clip.seed)
+        file == null || !file.exists() -> PhotoArt(Photos.of(clip.scene), modifier)
         file.extension.lowercase() == "m4a" -> {
             Box(modifier) {
                 AudioArt(Modifier.fillMaxSize())
@@ -340,11 +340,10 @@ private fun ClipViewer(clips: List<TodayClip>, startId: Int, onClose: () -> Unit
                 if (clip.media != null) {
                     key(clip.id, playKey) { ClipArt(clip, Modifier.fillMaxSize(), sound = true) }
                 } else {
-                    SceneArt(
-                        clip.scene,
-                        Modifier.fillMaxSize().graphicsLayer { val sc = 1f + 0.12f * prog.value; scaleX = sc; scaleY = sc },
-                        seed = clip.seed,
-                    )
+                    // 실사 영상(3초, 천천히 확대)을 반복 재생. 영상이 없는 장면은 사진을 천천히 확대
+                    val pic = Photos.of(clip.scene)
+                    if (pic.vid != null) key(clip.id, playKey) { PhotoVideo(pic, Modifier.fillMaxSize()) }
+                    else PhotoArt(pic, Modifier.fillMaxSize().graphicsLayer { val sc = 1f + 0.12f * prog.value; scaleX = sc; scaleY = sc })
                 }
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.7f))))
                 Box(
@@ -535,7 +534,7 @@ private fun StoryPage() {
     }
 
     Box(Modifier.fillMaxSize().clip(RoundedCornerShape(32.dp))) {
-        SceneArt(SceneKind.Sunset, Modifier.fillMaxSize(), seed = 1)
+        PhotoArt(Photos.gallery(3), Modifier.fillMaxSize())
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
 
         Column(Modifier.align(Alignment.TopStart).padding(40.dp)) {

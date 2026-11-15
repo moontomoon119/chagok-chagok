@@ -23,8 +23,8 @@ object Palette {
     val Danger = Color(0xFFE57373)
 }
 
-/** 코드로 그리는 장면 일러스트 종류 (실제 사진 대신 쓰는 시안용 이미지) */
-enum class SceneKind { LakeFog, Cable, Highway, Sunset, Rain, Meadow, Autumn }
+/** 장면 종류. ui/Photos.kt 에서 각각 실사풍 사진/영상에 이어진다. Road 는 새로 찍은 기록(카메라 도로) */
+enum class SceneKind { LakeFog, Cable, Highway, Sunset, Rain, Meadow, Autumn, Road }
 
 /** 갤러리에 흩뿌려 놓는 "순간" 카드 */
 data class Moment(

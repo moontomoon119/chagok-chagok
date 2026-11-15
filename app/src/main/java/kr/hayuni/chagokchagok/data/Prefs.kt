@@ -61,13 +61,12 @@ object Prefs {
     fun addRecordedClip(ctx: Context, file: java.io.File, hasVideo: Boolean) {
         val list = loadClips(ctx)
         val id = (list.maxOfOrNull { it.id } ?: -1) + 1
-        val scenes = SceneKind.values()
         val clip = TodayClip(
             id, SimpleDateFormat("HH:mm", Locale.KOREA).format(Date()), "방금 이 길",
             if (hasVideo) "5초 기록" else "5초 소리 기록",
             if (hasVideo) "홈 기록 버튼으로 남긴 순간이에요. 눌러서 다시 보고 제목을 바꿔 보세요."
             else "홈 기록 버튼으로 차 안의 소리를 남겼어요. 눌러서 다시 듣고 제목을 바꿔 보세요.",
-            "방금", 0xFF6FCFB3.toInt(), scenes[id % scenes.size], id, file.absolutePath,
+            "방금", 0xFF6FCFB3.toInt(), SceneKind.Road, id, file.absolutePath,
         )
         saveClips(ctx, list + clip)
     }

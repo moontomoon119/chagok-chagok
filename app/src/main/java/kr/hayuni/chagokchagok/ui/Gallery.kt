@@ -74,7 +74,7 @@ fun GalleryScreen(parked: Boolean) {
 private fun RecallPage() {
     var recalled by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize().clip(RoundedCornerShape(32.dp))) {
-        SceneArt(SceneKind.LakeFog, Modifier.fillMaxSize(), seed = 5)
+        PhotoArt(Photos.start, Modifier.fillMaxSize())
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
         Column(
             Modifier.align(Alignment.Center).widthIn(max = 1200.dp).padding(40.dp),

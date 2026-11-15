@@ -137,12 +137,11 @@ fun ChagokApp(refreshTick: Int = 0, onQuickRecordChange: (Boolean) -> Unit = {},
                 // 촬영해도 화면은 넘어가지 않는다. 오늘의 기록에 한 칸 추가되고, 저장됐다는 안내만 돌려준다.
                 onCaptured = {
                     val id = (clips.maxOfOrNull { it.id } ?: -1) + 1
-                    val scenes = SceneKind.values()
                     clips.add(
                         TodayClip(
                             id, SimpleDateFormat("HH:mm", Locale.KOREA).format(Date()), "방금 이 길", "5초 기록",
                             "방금 찍은 순간이에요. 눌러서 제목을 바꿔 보세요.", "방금", Palette.Mint.toArgb(),
-                            scenes[id % scenes.size], id,
+                            SceneKind.Road, id,
                         ),
                     )
                     persist()

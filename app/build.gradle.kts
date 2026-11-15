@@ -20,8 +20,8 @@ android {
         applicationId = "kr.hayuni.chagokchagok"
         minSdk = 28          // Pleos Connect 요구사항: API 28 이상
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.3.4"
+        versionCode = 8
+        versionName = "0.3.5"
     }
 
     signingConfigs {

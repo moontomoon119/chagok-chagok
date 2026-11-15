@@ -105,7 +105,7 @@ private fun MomentCard(m: Moment, onClick: () -> Unit) {
             .border(5.dp, Color.White.copy(alpha = 0.92f), RoundedCornerShape(24.dp))
             .clickable(onClick = onClick),
     ) {
-        SceneArt(m.scene, Modifier.fillMaxSize(), seed = m.seed)
+        PhotoArt(Photos.gallery(m.seed), Modifier.fillMaxSize())
         Box(
             Modifier
                 .fillMaxSize()
@@ -147,7 +147,7 @@ private fun MomentEditor(m: Moment, onChange: (Moment) -> Unit, onDelete: () -> 
         ) {
             // 미리보기: 타임스탬프와 글귀가 사진 위에 얹힌 모습
             Box(Modifier.size(760.dp, 580.dp)) {
-                SceneArt(m.scene, Modifier.fillMaxSize(), seed = m.seed)
+                PhotoVideo(Photos.gallery(m.seed), Modifier.fillMaxSize())
                 Box(
                     Modifier
                         .fillMaxSize()
@@ -307,7 +307,7 @@ private fun VideoCard(f: File, onClick: () -> Unit) {
         } else if (f.extension == "m4a") {
             AudioArt(Modifier.fillMaxSize())
         } else {
-            SceneArt(SceneKind.Highway, Modifier.fillMaxSize())
+            PhotoArt(Photos.camera, Modifier.fillMaxSize())
         }
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.75f))))
         Box(

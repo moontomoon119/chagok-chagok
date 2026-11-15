@@ -61,8 +61,8 @@ fun StartScreen(onStart: () -> Unit) {
     )
     Box(Modifier.fillMaxSize().background(Palette.Bg)) {
         // 갤러리에 들어 있는 기록 이미지 하나를 배경으로
-        SceneArt(
-            SceneKind.LakeFog,
+        PhotoArt(
+            Photos.start,
             Modifier
                 .fillMaxSize()
                 .graphicsLayer { scaleX = zoom; scaleY = zoom },
@@ -180,7 +180,7 @@ fun CameraScreen(
         // 영상 보관함에 road.mp4 가 있으면 그 영상을, 없으면 그려 둔 도로를 배경으로
         val ctx = LocalContext.current
         val roadFile = remember { VideoStore.roadVideo(ctx) }
-        if (roadFile != null) LoopingVideo(roadFile, Modifier.fillMaxSize()) else RoadViewfinder(Modifier.fillMaxSize())
+        if (roadFile != null) LoopingVideo(roadFile, Modifier.fillMaxSize()) else CameraRoadBackdrop(Modifier.fillMaxSize())
 
         // 상단
         CircleButton(Ico.Back, Modifier.align(Alignment.TopStart).padding(36.dp), onBack)
@@ -253,7 +253,7 @@ fun CameraScreen(
                 .clickable(enabled = !capturing, onClick = onToday),
         ) {
             if (count > 0 && lastScene != null) {
-                SceneArt(lastScene, Modifier.fillMaxSize(), seed = lastSeed)
+                PhotoArt(Photos.of(lastScene), Modifier.fillMaxSize())
                 Text(
                     "$count", color = Color.White, fontSize = Type.Body, fontWeight = FontWeight.Bold,
                     modifier = Modifier
