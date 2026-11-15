@@ -317,7 +317,10 @@ private fun VideoCard(f: File, onClick: () -> Unit) {
         Column(Modifier.align(Alignment.BottomStart).padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (f.name.startsWith("clip_")) Chip(if (f.extension == "m4a") "소리 5초" else "5초 기록", Palette.Amber, 18)
             if (f.nameWithoutExtension.equals("road", true)) Chip("카메라 배경", Palette.Mint, 18)
-            Text(f.name, color = Color.White, fontSize = Type.Body, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(
+                if (f.name.startsWith("clip_")) f.name else f.nameWithoutExtension.replace(Regex("^[0-9]+ *"), ""),
+                color = Color.White, fontSize = Type.Body, fontWeight = FontWeight.Bold, maxLines = 1,
+            )
             val sec = info.durationMs / 1000
             Text("%d:%02d".format(sec / 60, sec % 60), color = Color.White.copy(alpha = 0.8f), fontSize = Type.Label)
         }
@@ -326,6 +329,20 @@ private fun VideoCard(f: File, onClick: () -> Unit) {
 
 @Composable
 private fun VideoPlayer(f: File, onClose: () -> Unit) {
+    // 세로·정사각 영상도 잘리지 않게 영상 자체의 비율로 재생 창을 만든다
+    val aspect by produceState(16f / 9f, f) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val r = MediaMetadataRetriever()
+                try {
+                    r.setDataSource(f.absolutePath)
+                    val w = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toFloat() ?: 0f
+                    val h = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toFloat() ?: 0f
+                    if (w > 0f && h > 0f) w / h else 16f / 9f
+                } finally { r.release() }
+            }.getOrDefault(16f / 9f)
+        }
+    }
     Box(
         Modifier
             .fillMaxSize()
@@ -336,7 +353,7 @@ private fun VideoPlayer(f: File, onClose: () -> Unit) {
         Box(
             Modifier
                 .fillMaxHeight(0.92f)
-                .aspectRatio(16f / 9f)
+                .aspectRatio(aspect)
                 .clip(RoundedCornerShape(28.dp))
                 .background(Color.Black),
         ) {
