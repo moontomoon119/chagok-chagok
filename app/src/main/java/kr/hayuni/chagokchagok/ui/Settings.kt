@@ -130,11 +130,11 @@ private fun MovePanel(modifier: Modifier) {
 @Composable
 private fun QualityPanel(modifier: Modifier, quickRecord: Boolean, onQuickRecordChange: (Boolean) -> Unit) {
     val options = listOf(
-        Triple("표준", "720p", "저장 공간을 아껴요"),
-        Triple("고화질", "1080p", "차 화면에 선명하게 (추천)"),
+        Triple("표준", "720p", "기본 설정 · 어떤 화면에서도 일관되게 (추천)"),
+        Triple("고화질", "1080p", "차 화면에 더 선명하게"),
         Triple("최고화질", "4K", "저장 공간을 가장 많이 써요"),
     )
-    var sel by remember { mutableStateOf(1) }
+    var sel by remember { mutableStateOf(0) }   // 기본: 표준(720p) — 실제 5초 기록도 720p로 저장
     Panel(modifier) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
             PanelTitle("화질 설정", "5초 기록 영상의 화질을 골라요.", Ico.Vault, Palette.Sky)
