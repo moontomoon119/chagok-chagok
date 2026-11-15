@@ -46,6 +46,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kr.hayuni.chagokchagok.data.Moment
 import kr.hayuni.chagokchagok.data.Palette
+import kr.hayuni.chagokchagok.data.Prefs
 import kr.hayuni.chagokchagok.data.SceneKind
 import kr.hayuni.chagokchagok.data.Scenario
 import kr.hayuni.chagokchagok.data.VideoStore
@@ -72,7 +73,8 @@ private val captionPresets = listOf(
 
 @Composable
 fun Collage() {
-    val items = remember { mutableStateListOf<Moment>().apply { addAll(Scenario.moments) } }
+    val ctx = LocalContext.current
+    val items = remember { mutableStateListOf<Moment>().apply { addAll(Prefs.loadMoments(ctx)) } }
     var openIdx by remember { mutableIntStateOf(-1) }
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().horizontalScroll(rememberScrollState())) {
@@ -84,8 +86,8 @@ fun Collage() {
             val idx = openIdx
             MomentEditor(
                 m = items[idx],
-                onChange = { items[idx] = it },
-                onDelete = { items.removeAt(idx); openIdx = -1 },
+                onChange = { items[idx] = it; Prefs.saveMoments(ctx, items) },
+                onDelete = { items.removeAt(idx); Prefs.saveMoments(ctx, items); openIdx = -1 },
                 onClose = { openIdx = -1 },
             )
         }
@@ -111,7 +113,7 @@ private fun MomentCard(m: Moment, onClick: () -> Unit) {
         )
         m.badge?.let {
             Text(
-                it, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold,
+                it, color = Color.White, fontSize = Type.Caption, fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(14.dp)
@@ -121,14 +123,15 @@ private fun MomentCard(m: Moment, onClick: () -> Unit) {
             )
         }
         Column(Modifier.align(Alignment.BottomStart).padding(18.dp)) {
-            Text(m.caption ?: m.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, lineHeight = 28.sp)
-            Text(m.stampText() ?: "", color = Color.White.copy(alpha = 0.8f), fontSize = 16.sp)
+            Text(m.caption ?: m.title, color = Color.White, fontSize = Type.Body, fontWeight = FontWeight.Bold, lineHeight = 28.sp)
+            Text(m.stampText() ?: "", color = Color.White.copy(alpha = 0.8f), fontSize = Type.Caption)
         }
     }
 }
 
 @Composable
 private fun MomentEditor(m: Moment, onChange: (Moment) -> Unit, onDelete: () -> Unit, onClose: () -> Unit) {
+    var renaming by remember { mutableStateOf(false) }
     Box(
         Modifier
             .fillMaxSize()
@@ -156,10 +159,10 @@ private fun MomentEditor(m: Moment, onChange: (Moment) -> Unit, onDelete: () -> 
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         if (m.stamp == 2) {
-                            Text(m.timeText(), color = Color.White, fontSize = 84.sp, fontWeight = FontWeight.Bold, style = TextStyle(shadow = textShadow))
+                            Text(m.timeText(), color = Color.White, fontSize = Type.Display, fontWeight = FontWeight.Bold, style = TextStyle(shadow = textShadow))
                         }
                         Text(
-                            m.date, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.SemiBold,
+                            m.date, color = Color.White, fontSize = Type.Subtitle, fontWeight = FontWeight.SemiBold,
                             style = TextStyle(shadow = textShadow),
                             modifier = Modifier
                                 .border(2.dp, Color.White.copy(alpha = 0.9f), RoundedCornerShape(10.dp))
@@ -169,7 +172,7 @@ private fun MomentEditor(m: Moment, onChange: (Moment) -> Unit, onDelete: () -> 
                 }
                 Text(
                     m.caption ?: "“${m.quote}”",
-                    color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
+                    color = Color.White, fontSize = Type.Title, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
                     style = TextStyle(shadow = textShadow),
                     modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 40.dp, vertical = 40.dp),
                 )
@@ -180,38 +183,50 @@ private fun MomentEditor(m: Moment, onChange: (Moment) -> Unit, onDelete: () -> 
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(m.title, color = Palette.Text, fontSize = 36.sp, lineHeight = 46.sp, fontWeight = FontWeight.Bold)
-                    Text("편집", color = Palette.TextDim, fontSize = 20.sp)
+                    Text(m.title, color = Palette.Text, fontSize = Type.Title, lineHeight = 46.sp, fontWeight = FontWeight.Bold)
+                    Text(if (renaming) "제목을 바꾸는 중" else "편집", color = Palette.TextDim, fontSize = Type.Label)
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    EditAction(
-                        "타임스탬프", listOf("끔", "날짜", "날짜 + 시각")[m.stamp], Palette.Sky,
-                    ) { onChange(m.copy(stamp = (m.stamp + 1) % 3)) }
-                    EditAction("글귀", "바꾸기", Palette.Amber) {
-                        val cur = captionPresets.indexOf(m.caption).let { if (it < 0) 0 else it }
-                        onChange(m.copy(caption = captionPresets[(cur + 1) % captionPresets.size]))
+                if (renaming) {
+                    RenameBox(
+                        initial = m.title,
+                        presets = listOf("우리 가족 웃음 터진 곳", "다시 오고 싶은 길"),
+                        onSave = { onChange(m.copy(title = it)); renaming = false },
+                        onCancel = { renaming = false },
+                    )
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        EditAction("제목", "수정", Palette.Mint, Ico.Edit) { renaming = true }
+                        EditAction(
+                            "타임스탬프", listOf("끔", "날짜", "날짜 + 시각")[m.stamp], Palette.Sky, Ico.Clock,
+                        ) { onChange(m.copy(stamp = (m.stamp + 1) % 3)) }
+                        EditAction("글귀", "바꾸기", Palette.Amber, Ico.Text) {
+                            val cur = captionPresets.indexOf(m.caption).let { if (it < 0) 0 else it }
+                            onChange(m.copy(caption = captionPresets[(cur + 1) % captionPresets.size]))
+                        }
+                        EditAction("이 순간", "삭제", Palette.Danger, Ico.Trash, onClick = onDelete)
                     }
-                    EditAction("이 순간", "삭제", Palette.Danger, onClick = onDelete)
+                    BigButton("완료", onClose, Modifier.fillMaxWidth(), height = 52.dp)
                 }
-                BigButton("완료", onClose, Modifier.fillMaxWidth())
             }
         }
     }
 }
 
 @Composable
-private fun EditAction(label: String, value: String, color: Color, onClick: () -> Unit) {
+private fun EditAction(label: String, value: String, color: Color, icon: Int, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(Palette.SurfaceHi)
             .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 18.dp),
+            .padding(horizontal = 24.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, color = Palette.Text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-        Chip(value, color, 20)
+        AppIcon(icon, color, 26.dp)
+        Spacer(Modifier.width(14.dp))
+        Text(label, color = Palette.Text, fontSize = Type.Body, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        Chip(value, color, 18)
     }
 }
 
@@ -230,27 +245,27 @@ fun VideoVault() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
-                Text("영상 보관함이 비어 있어요", color = Palette.Text, fontSize = 44.sp, fontWeight = FontWeight.Bold)
+                Text("영상 보관함이 비어 있어요", color = Palette.Text, fontSize = Type.Title, fontWeight = FontWeight.Bold)
                 Text(
                     "저작권 프리 도로 영상(mp4)을 아래 폴더에 넣고 새로고침하세요.",
-                    color = Palette.TextDim, fontSize = 24.sp,
+                    color = Palette.TextDim, fontSize = Type.Body,
                 )
                 Text(
                     "Android/data/kr.hayuni.chagokchagok/files/Movies",
-                    color = Palette.Mint, fontSize = 22.sp,
+                    color = Palette.Mint, fontSize = Type.Body,
                 )
-                Text("파일 이름을 road.mp4 로 하면 카메라 화면 배경으로 반복 재생돼요.", color = Palette.TextDim, fontSize = 20.sp)
+                Text("파일 이름을 road.mp4 로 하면 카메라 화면 배경으로 반복 재생돼요.", color = Palette.TextDim, fontSize = Type.Label)
                 Spacer(Modifier.height(8.dp))
-                BigButton("새로고침", { files = VideoStore.list(ctx) })
+                BigButton("새로고침", { files = VideoStore.list(ctx) }, height = 48.dp)
             }
         } else {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(22.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("영상 ${files.size}개", color = Palette.Text, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    Text("영상 ${files.size}개", color = Palette.Text, fontSize = Type.Subtitle, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.width(16.dp))
-                    Text("동그라미로 찍은 카메라·소리 5초 기록도 여기에 쌓여요", color = Palette.TextDim, fontSize = 20.sp)
+                    Text("동그라미로 찍은 카메라·소리 5초 기록도 여기에 쌓여요", color = Palette.TextDim, fontSize = Type.Label)
                     Spacer(Modifier.weight(1f))
-                    BigButton("새로고침", { files = VideoStore.list(ctx) }, filled = false)
+                    BigButton("새로고침", { files = VideoStore.list(ctx) }, filled = false, height = 48.dp)
                 }
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(24.dp), modifier = Modifier.fillMaxSize()) {
                     items(files, key = { it.absolutePath }) { f -> VideoCard(f) { playing = f } }
@@ -289,26 +304,22 @@ private fun VideoCard(f: File, onClick: () -> Unit) {
         val frame = info.frame
         if (frame != null) {
             Image(frame, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        } else if (f.extension == "m4a") {
+            AudioArt(Modifier.fillMaxSize())
         } else {
             SceneArt(SceneKind.Highway, Modifier.fillMaxSize())
         }
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.75f))))
-        Canvas(Modifier.align(Alignment.Center).size(110.dp)) {
-            drawCircle(Color.Black.copy(alpha = 0.45f))
-            val p = Path().apply {
-                moveTo(size.width * 0.4f, size.height * 0.3f)
-                lineTo(size.width * 0.72f, size.height * 0.5f)
-                lineTo(size.width * 0.4f, size.height * 0.7f)
-                close()
-            }
-            drawPath(p, Color.White)
-        }
+        Box(
+            Modifier.align(Alignment.Center).size(72.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.Black.copy(alpha = 0.45f)),
+            contentAlignment = Alignment.Center,
+        ) { AppIcon(Ico.Play, Color.White, 34.dp) }
         Column(Modifier.align(Alignment.BottomStart).padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (f.name.startsWith("clip_")) Chip(if (f.extension == "m4a") "소리 5초" else "5초 기록", Palette.Amber, 18)
             if (f.nameWithoutExtension.equals("road", true)) Chip("카메라 배경", Palette.Mint, 18)
-            Text(f.name, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(f.name, color = Color.White, fontSize = Type.Body, fontWeight = FontWeight.Bold, maxLines = 1)
             val sec = info.durationMs / 1000
-            Text("%d:%02d".format(sec / 60, sec % 60), color = Color.White.copy(alpha = 0.8f), fontSize = 20.sp)
+            Text("%d:%02d".format(sec / 60, sec % 60), color = Color.White.copy(alpha = 0.8f), fontSize = Type.Label)
         }
     }
 }
@@ -332,7 +343,7 @@ private fun VideoPlayer(f: File, onClose: () -> Unit) {
             LoopingVideo(f, Modifier.fillMaxSize(), muted = false)
         }
         Text(
-            "닫기", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold,
+            "닫기", color = Color.White, fontSize = Type.Body, fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(24.dp)

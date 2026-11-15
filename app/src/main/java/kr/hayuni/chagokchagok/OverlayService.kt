@@ -34,12 +34,13 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
+import kr.hayuni.chagokchagok.data.Prefs
 import kr.hayuni.chagokchagok.data.VideoStore
 import java.io.File
 import kotlin.math.abs
 
 /**
- * 다른 앱을 쓰는 동안에도 화면 위에 떠 있는 "차곡차곡 기록 중" 동그라미.
+ * 다른 앱을 쓰는 동안에도 화면 위에 떠 있는 "눌러서 5초 기록" 동그라미.
  * 동그라미를 누르면 **카메라 영상 + 차 안의 소리(마이크)** 를 5초 동안 mp4 로 저장한다.
  *  - 카메라가 없는 기기(예: 일부 차량 에뮬레이터)에서는 소리만 m4a 로 저장한다.
  *  - 저장 위치는 영상 보관함(VideoStore)과 같다.
@@ -59,8 +60,30 @@ class OverlayService : Service() {
         var running = false
             private set
 
+        @Volatile
+        private var starting = false
+
+        @Volatile
+        private var instance: OverlayService? = null
+
+        /** 앱이 화면에 보이면 false(숨김), 앱에서 나가면 true(표시) */
+        @Volatile
+        private var wantVisible = false
+
         fun start(ctx: Context) {
+            if (running || starting) return
+            starting = true
             ctx.startForegroundService(Intent(ctx, OverlayService::class.java))
+        }
+
+        fun stop(ctx: Context) {
+            ctx.stopService(Intent(ctx, OverlayService::class.java))
+        }
+
+        /** 앱이 보이는 동안은 숨기고, 홈으로 나가면 기록 버튼을 띄운다 */
+        fun setBubbleVisible(v: Boolean) {
+            wantVisible = v
+            instance?.let { svc -> svc.handler.post { svc.applyVisible() } }
         }
     }
 
@@ -87,6 +110,7 @@ class OverlayService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            Prefs.setQuickRecord(this, false)   // 알림의 "끄기": 기능을 끈 것으로 저장
             stopSelf()
             return START_NOT_STICKY
         }
@@ -103,6 +127,7 @@ class OverlayService : Service() {
         }
         startAsForeground(type)
         if (cameraId == null && !hasMic) {
+            starting = false
             stopSelf()
             return START_NOT_STICKY
         }
@@ -110,10 +135,13 @@ class OverlayService : Service() {
         wm = getSystemService(WINDOW_SERVICE) as WindowManager
         try {
             addBubble()
+            instance = this
             running = true
+            applyVisible()
         } catch (e: Exception) {
             stopSelf()
         }
+        starting = false
         return START_NOT_STICKY
     }
 
@@ -126,9 +154,9 @@ class OverlayService : Service() {
         @Suppress("DEPRECATION")
         val n = Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.presence_video_online)
-            .setContentTitle("차곡차곡 기록 중")
-            .setContentText("동그라미를 누르면 카메라와 소리가 5초 동안 저장돼요")
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "중지", stopPi)
+            .setContentTitle("차곡차곡 기록 버튼 켜짐")
+            .setContentText("홈으로 나가면 기록 버튼이 떠요 · 누르면 카메라와 소리가 5초 저장돼요")
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "끄기", stopPi)
             .build()
         if (Build.VERSION.SDK_INT >= 29 && type != 0) startForeground(1, n, type) else startForeground(1, n)
     }
@@ -154,10 +182,10 @@ class OverlayService : Service() {
     private fun addBubble() {
         val d = resources.displayMetrics.density
         val label = TextView(this).apply {
-            text = "차곡차곡 기록 중"
+            text = "눌러서 5초 기록"
             setTextColor(Color.WHITE)
-            textSize = 20f
-            setPadding((22 * d).toInt(), (10 * d).toInt(), (22 * d).toInt(), (10 * d).toInt())
+            textSize = 17f
+            setPadding((18 * d).toInt(), (8 * d).toInt(), (18 * d).toInt(), (8 * d).toInt())
             background = GradientDrawable().apply {
                 cornerRadius = 100f * d
                 setColor(0xE60E151D.toInt())
@@ -168,7 +196,7 @@ class OverlayService : Service() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             addView(label, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
-            addView(bubble, LinearLayout.LayoutParams((112 * d).toInt(), (112 * d).toInt()).apply { topMargin = (10 * d).toInt() })
+            addView(bubble, LinearLayout.LayoutParams((92 * d).toInt(), (92 * d).toInt()).apply { topMargin = (8 * d).toInt() })
         }
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -201,27 +229,85 @@ class OverlayService : Service() {
         this.root = box
         this.label = label
         this.bubble = bubble
-        label.text = when {
-            cameraId != null && hasMic -> "차곡차곡 기록 중"
-            cameraId != null -> "차곡차곡 기록 중 · 소리 꺼짐"
-            else -> "차곡차곡 기록 중 · 카메라 없음(소리만)"
-        }
+        label.text = idleLabel()
     }
+
+    private fun idleLabel() = if (hasMic) "눌러서 5초 기록" else "눌러서 5초 기록 · 소리 꺼짐"
 
     // ───────────────────────── 5초 기록 ─────────────────────────
 
     private fun record5s() {
         if (recording) return
         recording = true
-        val withVideo = cameraId != null
-        val file = if (withVideo) VideoStore.newClipFile(this) else VideoStore.newAudioFile(this)
-        val rec = buildRecorder(file, withVideo)
+        // 항상 영상(mp4)으로 저장한다. 카메라가 없는 기기(Pleos 에뮬레이터 등)에서는
+        // 카메라 대신 앞유리 풍경 화면을 그려 넣은 영상 + 마이크 소리로 기록한다.
+        val file = VideoStore.newClipFile(this)
+        val rec = buildRecorder(file, withVideo = true)
         if (rec == null) { fail(file, "기록하지 못했어요"); return }
         activeRecorder = rec
-        if (withVideo) openCameraAndRecord(rec, file) else {
-            try { rec.start() } catch (e: Exception) { fail(file, "기록하지 못했어요"); return }
-            startTimer(file)
+        if (cameraId != null) openCameraAndRecord(rec, file) else {
+            try {
+                val surface = rec.surface
+                rec.start()
+                startTimer(file)
+                drawSyntheticFrames(surface, System.currentTimeMillis())
+            } catch (e: Exception) { fail(file, "기록하지 못했어요"); return }
         }
+    }
+
+    /** 카메라가 없을 때: 녹화 surface 에 앞유리 풍경(흐르는 도로)을 30fps 로 그려 영상 프레임으로 쓴다 */
+    private fun drawSyntheticFrames(surface: android.view.Surface, startAt: Long) {
+        val w = videoSize.width.toFloat()
+        val h = videoSize.height.toFloat()
+        val horizon = h * 0.42f
+        val sky = Paint().apply {
+            shader = android.graphics.LinearGradient(0f, 0f, 0f, horizon, 0xFF3F86DA.toInt(), 0xFFC4E3F7.toInt(), android.graphics.Shader.TileMode.CLAMP)
+        }
+        val hill = Paint().apply { color = 0xFF82A892.toInt(); isAntiAlias = true }
+        val grass = Paint().apply { color = 0xFF5E9F58.toInt() }
+        val road = Paint().apply { color = 0xFF4A515B.toInt(); isAntiAlias = true }
+        val dash = Paint().apply { color = 0xFFF5F0E0.toInt(); isAntiAlias = true }
+        val tree = Paint().apply { color = 0xFF3F7D4E.toInt(); isAntiAlias = true }
+        val path = android.graphics.Path()
+        val cx = w / 2f
+        val frame = object : Runnable {
+            override fun run() {
+                if (!recording || activeRecorder == null) return
+                val t = (System.currentTimeMillis() - startAt) / 1000f
+                try {
+                    val c = surface.lockCanvas(null)
+                    c.drawRect(0f, 0f, w, horizon, sky)
+                    c.drawCircle(w * 0.78f, horizon * 0.55f, h * 0.07f, Paint().apply { color = 0xFFFFE4AE.toInt(); isAntiAlias = true })
+                    path.reset(); path.moveTo(0f, horizon)
+                    path.cubicTo(w * 0.2f, horizon - h * 0.12f, w * 0.4f, horizon - h * 0.02f, w * 0.6f, horizon - h * 0.09f)
+                    path.cubicTo(w * 0.8f, horizon - h * 0.14f, w * 0.9f, horizon - h * 0.04f, w, horizon - h * 0.06f)
+                    path.lineTo(w, horizon); path.close()
+                    c.drawPath(path, hill)
+                    c.drawRect(0f, horizon, w, h, grass)
+                    path.reset(); path.moveTo(cx - w * 0.012f, horizon); path.lineTo(cx + w * 0.012f, horizon)
+                    path.lineTo(w * 0.9f, h); path.lineTo(w * 0.1f, h); path.close()
+                    c.drawPath(path, road)
+                    for (k in 0 until 9) {
+                        val z = ((k + t * 2.2f) % 9f) / 9f           // 0(멀리) → 1(가까이)
+                        val p = z * z
+                        val y = horizon + (h - horizon) * p
+                        val half = (w * 0.012f) + (w * 0.012f) * p * 3f
+                        val len = (h - horizon) * 0.07f * (0.3f + p)
+                        c.drawRect(cx - half, y, cx + half, y + len, dash)
+                        for (side in intArrayOf(-1, 1)) {      // 길가의 나무
+                            val tx = cx + side * (w * 0.06f + (w * 0.46f) * p)
+                            val tr = h * 0.012f + h * 0.11f * p
+                            c.drawCircle(tx, y - tr * 1.2f, tr, tree)
+                        }
+                    }
+                    surface.unlockCanvasAndPost(c)
+                } catch (e: Exception) {
+                    return
+                }
+                camHandler.postDelayed(this, 33)
+            }
+        }
+        camHandler.post(frame)
     }
 
     private fun buildRecorder(file: File, withVideo: Boolean): MediaRecorder? {
@@ -318,7 +404,8 @@ class OverlayService : Service() {
         releaseRecording(stopRecorder = true)
         bubble?.setRecording(false, 0f)
         recording = false
-        flash(if (cameraId != null) "저장됨 ✓ 갤러리 > 영상 보관함" else "소리 저장됨 ✓ 갤러리 > 영상 보관함")
+        runCatching { Prefs.addRecordedClip(this, file, hasVideo = true) }
+        flash("저장됨 ✓ 오늘의 기록에 담았어요")
     }
 
     private fun fail(file: File, msg: String) {
@@ -345,15 +432,17 @@ class OverlayService : Service() {
     private fun flash(msg: String) {
         label?.text = msg
         handler.postDelayed({
-            if (!recording) label?.text = when {
-                cameraId != null && hasMic -> "차곡차곡 기록 중"
-                cameraId != null -> "차곡차곡 기록 중 · 소리 꺼짐"
-                else -> "차곡차곡 기록 중 · 카메라 없음(소리만)"
-            }
+            if (!recording) label?.text = idleLabel()
         }, 2800)
     }
 
+    private fun applyVisible() {
+        root?.visibility = if (wantVisible) View.VISIBLE else View.GONE
+    }
+
     override fun onDestroy() {
+        instance = null
+        starting = false
         handler.removeCallbacksAndMessages(null)
         recording = false
         releaseRecording(stopRecorder = false)
@@ -363,12 +452,17 @@ class OverlayService : Service() {
         super.onDestroy()
     }
 
-    /** 흰 테두리 + 빨간 점. 녹화 중에는 둘레에 진행 호가 돈다. */
+    /** 앱 로고와 같은 12칸 셔터 링 + 가운데 원. 녹화 중에는 칸이 하나씩 채워지고 가운데가 빨간 사각형이 된다. */
     private class BubbleView(ctx: Context) : View(ctx) {
-        private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Color.WHITE }
-        private val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFE5574B.toInt() }
-        private val arc = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = 0xFFF2B35E.toInt(); strokeCap = Paint.Cap.ROUND }
-        private val back = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x990E151D.toInt() }
+        private val seg = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+        private val core = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFF4EFE6.toInt() }
+        private val stop = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFE5574B.toInt() }
+        private val back = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xE6101A24.toInt() }
+        private val colors = intArrayOf(
+            0xFFFEDA77.toInt(), 0xFFF9AF4E.toInt(), 0xFFF58529.toInt(), 0xFFE95752.toInt(), 0xFFDD2A7B.toInt(),
+            0xFFAF2F95.toInt(), 0xFF8134AF.toInt(), 0xFF6947C1.toInt(), 0xFF515BD4.toInt(),
+        )
+        private val slate = 0xFF3A4756.toInt()
         private var rec = false
         private var progress = 0f
 
@@ -378,17 +472,21 @@ class OverlayService : Service() {
             val d = resources.displayMetrics.density
             val cx = width / 2f
             val cy = height / 2f
-            val r = minOf(width, height) / 2f - 6 * d
-            ring.strokeWidth = 6 * d
-            arc.strokeWidth = 8 * d
-            c.drawCircle(cx, cy, r + 4 * d, back)
-            c.drawCircle(cx, cy, r, ring)
+            val outer = minOf(width, height) / 2f
+            val r = outer - 12 * d
+            seg.strokeWidth = 8 * d
+            c.drawCircle(cx, cy, outer - 1 * d, back)
+            val box = RectF(cx - r, cy - r, cx + r, cy + r)
+            val filled = if (rec) 1 + (progress * 11f).toInt() else 9
+            for (i in 0 until 12) {
+                seg.color = if (i < filled && i < colors.size) colors[i] else if (rec && i < filled) colors[colors.size - 1] else slate
+                c.drawArc(box, -90f + 30f * i + 3f, 24f, false, seg)
+            }
             if (rec) {
-                val s = r * 0.5f
-                c.drawRoundRect(RectF(cx - s, cy - s, cx + s, cy + s), 10 * d, 10 * d, dot)
-                c.drawArc(RectF(cx - r, cy - r, cx + r, cy + r), -90f, 360f * progress, false, arc)
+                val s = r * 0.46f
+                c.drawRoundRect(RectF(cx - s, cy - s, cx + s, cy + s), 8 * d, 8 * d, stop)
             } else {
-                c.drawCircle(cx, cy, r * 0.62f, dot)
+                c.drawCircle(cx, cy, r * 0.56f, core)
             }
         }
     }

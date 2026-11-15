@@ -2,6 +2,7 @@ package kr.hayuni.chagokchagok.data
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 
 /**
  * 1차 제출용 시나리오 데이터.
@@ -36,6 +37,20 @@ data class Moment(
     val badge: String? = null,
     val stamp: Int = 1,              // 0 끔 / 1 날짜 / 2 날짜+시각
     val caption: String? = null,     // 편집으로 바꾼 글귀
+)
+
+/** 오늘의 기록 한 칸. 앱을 처음 켜면 시나리오(귀가 중)의 5개가 들어 있고, 촬영하면 계속 늘어난다. */
+data class TodayClip(
+    val id: Int,
+    val time: String,
+    val place: String,       // 카드 제목 (수정 가능)
+    val title: String,
+    val detail: String,
+    val tag: String,
+    val color: Int,          // ARGB
+    val scene: SceneKind,
+    val seed: Int,
+    val media: String? = null,   // 홈 기록 버튼으로 찍은 실제 파일(mp4/m4a) 경로. 없으면 일러스트 카드
 )
 
 data class TimelineEvent(
@@ -76,6 +91,14 @@ object Scenario {
 
     /** events 와 같은 순서의 장면 */
     val eventScenes = listOf(SceneKind.Meadow, SceneKind.Highway, SceneKind.LakeFog, SceneKind.Cable, SceneKind.Sunset)
+
+    /**
+     * 처음 시작할 때의 오늘의 기록 = "춘천 당일치기를 마치고 귀가 중"인 상황(15:20).
+     * 한마디(12:45)와 귀갓길(15:20)까지 이미 쌓여 있어서 한마디·귀갓길 낭독을 바로 쓸 수 있다.
+     */
+    fun defaultClips(): List<TodayClip> = events.mapIndexed { i, e ->
+        TodayClip(i, e.time, e.place, e.title, e.detail, e.tag, e.color.toArgb(), eventScenes[i], i)
+    }
 
     val moments = listOf(
         Moment(SceneKind.LakeFog, 0, "안개가 먼저 와 있던 날", "2026.10.17", "안개등을 켠 의암호 길", 30, 40, 290, 400, -3f, "1s"),

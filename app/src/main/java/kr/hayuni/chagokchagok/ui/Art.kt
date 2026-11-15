@@ -12,9 +12,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.PointMode
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import kr.hayuni.chagokchagok.data.SceneKind
@@ -96,16 +101,51 @@ private fun DrawScope.ridge(baseY: Float, amp: Float, cycles: Float, phase: Floa
 }
 
 private fun DrawScope.cloud(cx: Float, cy: Float, r: Float, alpha: Float) {
-    val c = Color.White.copy(alpha = alpha)
-    drawCircle(c, r, Offset(cx, cy))
-    drawCircle(c, r * 0.8f, Offset(cx - r * 0.9f, cy + r * 0.2f))
-    drawCircle(c, r * 0.9f, Offset(cx + r, cy + r * 0.15f))
-    drawCircle(c, r * 0.6f, Offset(cx + r * 1.8f, cy + r * 0.3f))
+    fun puff(c: Color, dy: Float) {
+        drawCircle(c, r * 0.72f, Offset(cx - r * 0.75f, cy + r * 0.12f + dy))
+        drawCircle(c, r * 1.0f, Offset(cx + r * 0.05f, cy - r * 0.18f + dy))
+        drawCircle(c, r * 0.82f, Offset(cx + r * 1.0f, cy + r * 0.02f + dy))
+        drawCircle(c, r * 0.52f, Offset(cx + r * 1.75f, cy + r * 0.3f + dy))
+        drawRoundRect(
+            c, Offset(cx - r * 1.4f, cy + r * 0.1f + dy), Size(r * 3.6f, r * 0.72f),
+            androidx.compose.ui.geometry.CornerRadius(r * 0.36f),
+        )
+    }
+    puff(Color.White.copy(alpha = alpha), 0f)
+}
+
+/**
+ * 모든 장면에 공통으로 얹는 "따뜻한 필름" 톤 — 채도를 살짝 낮추고, 위는 차가운 남색·아래는 따뜻한 갈색으로 물들이고,
+ * 가장자리를 어둡게(비네팅), 아주 고운 입자(그레인)를 뿌린다. 장면마다 색이 달라도 한 책의 삽화처럼 보이게 한다.
+ */
+private fun DrawScope.tone() {
+    val w = size.width
+    val h = size.height
+    drawRect(Color(0xFF808080).copy(alpha = 0.26f), blendMode = BlendMode.Saturation)
+    drawRect(
+        Brush.verticalGradient(
+            listOf(Color(0xFF1A2342).copy(alpha = 0.26f), Color.Transparent, Color(0xFF4A2812).copy(alpha = 0.2f)),
+            0f, h,
+        ),
+    )
+    drawRect(
+        Brush.radialGradient(
+            listOf(Color.Transparent, Color(0xFF0A0E14).copy(alpha = 0.38f)),
+            Offset(w / 2f, h / 2f), maxOf(w, h) * 0.78f,
+        ),
+    )
+    val g = Random(3)
+    val light = ArrayList<Offset>(260)
+    val dark = ArrayList<Offset>(260)
+    repeat(260) { light.add(Offset(g.nextFloat() * w, g.nextFloat() * h)) }
+    repeat(260) { dark.add(Offset(g.nextFloat() * w, g.nextFloat() * h)) }
+    drawPoints(light, PointMode.Points, Color.White.copy(alpha = 0.07f), 2.2f)
+    drawPoints(dark, PointMode.Points, Color.Black.copy(alpha = 0.08f), 2.2f)
 }
 
 @Composable
 fun SceneArt(kind: SceneKind, modifier: Modifier = Modifier, seed: Int = 0) {
-    Canvas(modifier.clipToBounds()) {
+    Canvas(modifier.clipToBounds().graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)) {
         val w = size.width
         val h = size.height
         val s = specOf(kind)
@@ -152,6 +192,7 @@ fun SceneArt(kind: SceneKind, modifier: Modifier = Modifier, seed: Int = 0) {
                 val y2 = hy + (h - hy) * (u + 0.08f) * (u + 0.08f)
                 drawLine(Color.White.copy(alpha = 0.9f), Offset(w * 0.5f, y1), Offset(w * 0.5f, y2), strokeWidth = 2f + 14f * u * u)
             }
+            tone()
             return@Canvas
         }
 
@@ -227,6 +268,7 @@ fun SceneArt(kind: SceneKind, modifier: Modifier = Modifier, seed: Int = 0) {
             }
             else -> {}
         }
+        tone()
     }
 }
 
@@ -236,7 +278,7 @@ fun RoadViewfinder(modifier: Modifier = Modifier) {
     val t by rememberInfiniteTransition(label = "road").animateFloat(
         0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "t",
     )
-    Canvas(modifier.clipToBounds()) {
+    Canvas(modifier.clipToBounds().graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)) {
         val w = size.width
         val h = size.height
         val hy = h * 0.52f
@@ -244,9 +286,9 @@ fun RoadViewfinder(modifier: Modifier = Modifier) {
         val rnd = Random(7)
 
         drawRect(Brush.verticalGradient(listOf(Color(0xFF1B69CF), Color(0xFF8FC8F2)), 0f, hy))
-        cloud(w * 0.3f, hy * 0.62f, w * 0.1f, 0.9f)
-        cloud(w * 0.62f, hy * 0.78f, w * 0.12f, 0.85f)
-        cloud(w * 0.82f, hy * 0.45f, w * 0.07f, 0.8f)
+        cloud(w * 0.3f, hy * 0.62f, w * 0.07f, 0.9f)
+        cloud(w * 0.6f, hy * 0.74f, w * 0.085f, 0.85f)
+        cloud(w * 0.8f, hy * 0.4f, w * 0.05f, 0.8f)
 
         // 스카이라인
         var x = 0f
@@ -305,6 +347,28 @@ fun RoadViewfinder(modifier: Modifier = Modifier) {
                 Offset(w * 0.905f + gx * w * 0.0155f, h * 0.02f + gy * h * 0.04f),
                 Size(w * 0.01f, h * 0.026f),
             )
+        }
+        tone()
+    }
+}
+
+/** 소리만 저장된 기록(m4a)용 카드 배경: 파형 */
+@Composable
+fun AudioArt(modifier: Modifier = Modifier) {
+    Canvas(modifier.clipToBounds()) {
+        val w = size.width
+        val h = size.height
+        drawRect(Brush.verticalGradient(listOf(Color(0xFF243646), Color(0xFF17212C))))
+        val n = 31
+        val gap = w / (n + 1)
+        val cy = h * 0.42f
+        for (i in 0 until n) {
+            val u = i / (n - 1f)
+            val env = sin(PI * u).toFloat()
+            val bump = 0.45f + 0.55f * (0.5f + 0.5f * sin(i * 1.9).toFloat())
+            val bar = (h * 0.34f * env * bump).coerceAtLeast(h * 0.03f)
+            val c = lerp(Color(0xFF6FCFB3), Color(0xFFF2B35E), u)
+            drawLine(c, Offset(gap * (i + 1), cy - bar / 2f), Offset(gap * (i + 1), cy + bar / 2f), strokeWidth = gap * 0.42f, cap = StrokeCap.Round)
         }
     }
 }

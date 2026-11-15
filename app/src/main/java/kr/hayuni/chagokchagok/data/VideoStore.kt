@@ -42,4 +42,11 @@ object VideoStore {
         val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         return File(dir(ctx), "clip_$stamp.m4a")
     }
+
+    /** 앱이 직접 찍은 5초 기록(clip_*)만 지운다. 사용자가 넣은 영상(road.mp4 등)은 그대로 둔다. */
+    fun deleteRecorded(ctx: Context): Int {
+        var n = 0
+        list(ctx).filter { it.name.startsWith("clip_") }.forEach { if (it.delete()) n++ }
+        return n
+    }
 }

@@ -2,4 +2,5 @@
 <resources>
     <color name="chagok_bg">#0E151D</color>
     <color name="chagok_amber">#F2B35E</color>
+    <color name="chagok_icon_bg">#101A24</color>
 </resources>

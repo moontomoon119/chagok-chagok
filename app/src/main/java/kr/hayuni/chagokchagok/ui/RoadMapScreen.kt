@@ -82,7 +82,7 @@ fun RoadMapPage(parked: Boolean) {
     ) {
         val map = data
         if (map == null) {
-            Text("도로망을 불러오는 중…", color = Palette.TextDim, fontSize = 28.sp, modifier = Modifier.align(Alignment.Center))
+            Text("도로망을 불러오는 중…", color = Palette.TextDim, fontSize = Type.Subtitle, modifier = Modifier.align(Alignment.Center))
         } else {
             RoadMapContent(map)
         }
@@ -92,8 +92,8 @@ fun RoadMapPage(parked: Boolean) {
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("달리는 중에는 음성으로만 동작해요", color = Palette.Amber, fontSize = 44.sp, fontWeight = FontWeight.Bold)
-                    Text("지도 탐색은 주차 브레이크를 걸었을 때만 열려요.", color = Palette.TextDim, fontSize = 24.sp)
+                    Text("달리는 중에는 음성으로만 동작해요", color = Palette.Amber, fontSize = Type.Title, fontWeight = FontWeight.Bold)
+                    Text("지도 탐색은 주차 브레이크를 걸었을 때만 열려요.", color = Palette.TextDim, fontSize = Type.Body)
                     Spacer(Modifier.height(8.dp))
                     Chip("“작년 춘천 이야기 들려줘”  라고 말해 보세요", Palette.Mint, 22)
                 }
@@ -174,7 +174,7 @@ private fun RoadMapContent(map: RoadMapData) {
             val x = sx(map.x(lon)).roundToInt()
             val y = sy(map.y(lat)).roundToInt()
             Text(
-                name, color = Color(0xFFB6C3CF), fontSize = 20.sp, fontWeight = FontWeight.SemiBold,
+                name, color = Color(0xFFB6C3CF), fontSize = Type.Label, fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .offset { IntOffset(x, y) }
                     .clip(RoundedCornerShape(6.dp))
@@ -192,7 +192,7 @@ private fun RoadMapContent(map: RoadMapData) {
             val home = pl.id == "home"
             val labelText = @Composable {
                 Text(
-                    pl.label, color = Palette.Text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold,
+                    pl.label, color = Palette.Text, fontSize = Type.Label, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
                         .background(Palette.Bg.copy(alpha = 0.88f))
@@ -234,7 +234,7 @@ private fun RoadMapContent(map: RoadMapData) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(22.dp),
         ) {
-            Text("차곡차곡 · 도로 위의 기억", color = Palette.Amber, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+            Text("차곡차곡 · 도로 위의 기억", color = Palette.Amber, fontSize = Type.Subtitle, fontWeight = FontWeight.Bold)
             map.routes.forEach { r -> LegendItem(r, r.id in visible) {
                 visible = if (r.id in visible) visible - r.id else visible + r.id
             } }
@@ -245,9 +245,9 @@ private fun RoadMapContent(map: RoadMapData) {
             Modifier.align(Alignment.TopEnd).padding(28.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            MapButton("확대 +") { zoomAround(Offset(wPx / 2f, hPx / 2f), 1.6f) }
-            MapButton("축소 −") { zoomAround(Offset(wPx / 2f, hPx / 2f), 1f / 1.6f) }
-            MapButton("전체") { zoom = 1f; pan = Offset.Zero; visible = map.routes.map { it.id }.toSet() }
+            MapButton(Ico.Plus) { zoomAround(Offset(wPx / 2f, hPx / 2f), 1.6f) }
+            MapButton(Ico.Minus) { zoomAround(Offset(wPx / 2f, hPx / 2f), 1f / 1.6f) }
+            MapButton(Ico.Fit) { zoom = 1f; pan = Offset.Zero; visible = map.routes.map { it.id }.toSet() }
         }
 
         // 하단: 경로 요약 + 출처
@@ -258,14 +258,14 @@ private fun RoadMapContent(map: RoadMapData) {
             map.routes.filter { it.id in visible }.forEach { r ->
                 Text(
                     "${r.label} · ${r.tag} · ${"%.1f".format(r.km)}km",
-                    color = r.color, fontSize = 20.sp, fontWeight = FontWeight.SemiBold,
+                    color = r.color, fontSize = Type.Label, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
                         .background(Palette.Bg.copy(alpha = 0.8f))
                         .padding(horizontal = 14.dp, vertical = 6.dp),
                 )
             }
-            Text("국토교통 KTDB 도로망 기반 시연 데이터 · 실제 주행 기록 아님", color = Palette.TextDim, fontSize = 16.sp)
+            Text("국토교통 KTDB 도로망 기반 시연 데이터 · 실제 주행 기록 아님", color = Palette.TextDim, fontSize = Type.Caption)
         }
     }
 }
@@ -283,20 +283,20 @@ private fun LegendItem(r: MapRoute, on: Boolean, onClick: () -> Unit) {
         Spacer(Modifier.width(10.dp))
         Text(
             r.shortName, color = if (on) r.color else Palette.TextDim.copy(alpha = 0.6f),
-            fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
+            fontSize = Type.Body, fontWeight = FontWeight.SemiBold,
         )
     }
 }
 
 @Composable
-private fun MapButton(text: String, onClick: () -> Unit) {
-    Text(
-        text, color = Palette.Text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold,
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+private fun MapButton(icon: Int, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(48.dp)
+            .clip(CircleShape)
             .background(Color(0xFF243646))
-            .border(1.dp, Palette.Line, RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 26.dp, vertical = 14.dp),
-    )
+            .border(1.dp, Palette.Line, CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { AppIcon(icon, Palette.Text, 24.dp) }
 }

@@ -49,9 +49,12 @@ fun GalleryScreen(parked: Boolean) {
             .padding(start = 44.dp, end = 44.dp, top = 8.dp, bottom = 28.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            SubTabs(listOf("모아보기", "영상 보관함", "지도", "회상"), sub) { sub = it }
+            SubTabs(
+                listOf("모아보기", "영상 보관함", "지도", "회상"), sub, { sub = it },
+                icons = listOf(Ico.Collage, Ico.Vault, Ico.Map, Ico.Recall),
+            )
             Spacer(Modifier.weight(1f))
-            if (sub == 0) Text("옆으로 밀어서 둘러보세요  →", color = Palette.TextDim, fontSize = 20.sp)
+            if (sub == 0) Text("옆으로 밀어서 둘러보세요  →", color = Palette.TextDim, fontSize = Type.Label)
         }
         Spacer(Modifier.height(22.dp))
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -84,18 +87,18 @@ private fun RecallPage() {
             }
             Text(
                 "“3년 전 이 길에서\n뒷창문 두 개가 동시에 내려갔어요.\n그날 이야기 들려드릴까요?”",
-                color = Color.White, fontSize = 52.sp, lineHeight = 70.sp,
+                color = Color.White, fontSize = Type.Headline, lineHeight = 70.sp,
                 fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
             )
             if (!recalled) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    BigButton("들려주세요", { recalled = true })
-                    BigButton("다음에요", {}, filled = false)
+                    BigButton("들려주세요", { recalled = true }, icon = Ico.Play, height = 52.dp)
+                    BigButton("다음에요", {}, filled = false, height = 52.dp)
                 }
             } else {
                 Text(
                     "「${Scenario.STORY_TITLE}」 — 안개등을 켠 의암호 길, 호수 바람이 들어오던 뒷창문. 그날 여섯 살 딸의 목소리가 이어서 나와요.",
-                    color = Palette.Mint, fontSize = 26.sp, lineHeight = 38.sp, textAlign = TextAlign.Center,
+                    color = Palette.Mint, fontSize = Type.Subtitle, lineHeight = 38.sp, textAlign = TextAlign.Center,
                 )
                 Chip("♪ 딸 목소리 재생", Palette.Amber, 22)
             }

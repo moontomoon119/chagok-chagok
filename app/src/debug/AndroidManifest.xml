@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 디버그 빌드 전용: 일러스트를 UI 없이 이미지로 내보내는 도구 (release APK에는 포함되지 않음) -->
+    <application>
+        <activity
+            android:name=".ExportActivity"
+            android:exported="true"
+            android:screenOrientation="sensorLandscape" />
+    </application>
+</manifest>

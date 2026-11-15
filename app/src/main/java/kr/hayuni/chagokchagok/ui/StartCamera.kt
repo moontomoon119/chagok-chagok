@@ -78,14 +78,17 @@ fun StartScreen(onStart: () -> Unit) {
                 ),
         )
 
-        Text(
-            "차곡차곡",
-            color = Color.White,
-            fontSize = 34.sp,
-            fontWeight = FontWeight.Bold,
-            style = TextStyle(shadow = softShadow),
-            modifier = Modifier.align(Alignment.TopStart).padding(44.dp),
-        )
+        Row(Modifier.align(Alignment.TopStart).padding(start = 32.dp, top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.foundation.Image(
+                androidx.compose.ui.res.painterResource(kr.hayuni.chagokchagok.R.drawable.ic_launcher_foreground),
+                contentDescription = null,
+                modifier = Modifier.size(72.dp).offset(x = (-12).dp),
+            )
+            Text(
+                "차곡차곡", color = Color.White, fontSize = Type.Subtitle, fontWeight = FontWeight.Bold,
+                style = TextStyle(shadow = softShadow), modifier = Modifier.offset(x = (-18).dp),
+            )
+        }
 
         Column(
             Modifier.align(Alignment.Center),
@@ -94,7 +97,7 @@ fun StartScreen(onStart: () -> Unit) {
             Text(
                 "달린 길마다,\n우리 가족 이야기가 차곡차곡.",
                 color = Color.White,
-                fontSize = 72.sp,
+                fontSize = Type.Display,
                 lineHeight = 92.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -104,7 +107,7 @@ fun StartScreen(onStart: () -> Unit) {
             Text(
                 "문이 열린 곳, 창문을 내린 길까지 차가 알아서 기억해요.",
                 color = Color.White.copy(alpha = 0.9f),
-                fontSize = 28.sp,
+                fontSize = Type.Subtitle,
                 textAlign = TextAlign.Center,
                 style = TextStyle(shadow = softShadow),
             )
@@ -114,8 +117,8 @@ fun StartScreen(onStart: () -> Unit) {
             Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 64.dp)
-                .width(620.dp)
-                .height(96.dp)
+                .width(440.dp)
+                .height(72.dp)
                 .graphicsLayer {
                     val s = 1f + 0.015f * glow
                     scaleX = s; scaleY = s
@@ -125,7 +128,7 @@ fun StartScreen(onStart: () -> Unit) {
                 .clickable(onClick = onStart),
             contentAlignment = Alignment.Center,
         ) {
-            Text("차곡차곡 쌓으러 가기", color = Color(0xFF16202B), fontSize = 32.sp, fontWeight = FontWeight.Bold)
+            Text("차곡차곡 쌓으러 가기", color = Color(0xFF16202B), fontSize = Type.Subtitle, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -133,11 +136,11 @@ fun StartScreen(onStart: () -> Unit) {
 // ───────────────────────── 카메라 화면 ─────────────────────────
 
 private val signals = listOf(
-    "문" to "모두 닫힘",
-    "창문" to "닫힘",
-    "안개등" to "꺼짐",
-    "와이퍼" to "꺼짐",
-    "위치" to "가평 방면",
+    Triple(Ico.Door, "문", "모두 닫힘"),
+    Triple(Ico.Window, "창문", "닫힘"),
+    Triple(Ico.Fog, "안개등", "꺼짐"),
+    Triple(Ico.Wiper, "와이퍼", "꺼짐"),
+    Triple(Ico.Pin, "위치", "가평 방면"),
 )
 
 @Composable
@@ -145,8 +148,9 @@ fun CameraScreen(
     onBack: () -> Unit,
     onToday: () -> Unit,
     onCaptured: () -> String,
-    onBackground: () -> Unit,
     count: Int,
+    lastScene: SceneKind?,
+    lastSeed: Int,
 ) {
     var toast by remember { mutableStateOf<String?>(null) }
     var dur by remember { mutableIntStateOf(1) }
@@ -180,7 +184,7 @@ fun CameraScreen(
         if (roadFile != null) LoopingVideo(roadFile, Modifier.fillMaxSize()) else RoadViewfinder(Modifier.fillMaxSize())
 
         // 상단
-        CircleButton("‹", Modifier.align(Alignment.TopStart).padding(36.dp), onBack)
+        CircleButton(Ico.Back, Modifier.align(Alignment.TopStart).padding(36.dp), onBack)
         Row(
             Modifier.align(Alignment.TopEnd).padding(36.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -191,25 +195,36 @@ fun CameraScreen(
                 )
                 Box(Modifier.size(16.dp).clip(CircleShape).background(Palette.Danger.copy(alpha = pulse)))
                 Spacer(Modifier.width(10.dp))
-                Text("기록 중", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, style = TextStyle(shadow = softShadow))
+                Text("기록 중", color = Color.White, fontSize = Type.Body, fontWeight = FontWeight.Bold, style = TextStyle(shadow = softShadow))
             } else {
-                Text("차 앞 카메라 · 자동 기록 켜짐", color = Color.White, fontSize = 22.sp, style = TextStyle(shadow = softShadow))
+                Text(
+                    "차 앞 카메라 · 자동 기록 켜짐", color = Color.White, fontSize = Type.Body,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(Color(0xFF0E151D).copy(alpha = 0.55f))
+                        .padding(horizontal = 24.dp, vertical = 10.dp),
+                )
             }
         }
 
         // 왼쪽: 차량 신호 목록 (참고 화면의 모드 목록 자리)
         Column(
-            Modifier.align(Alignment.CenterStart).padding(start = 48.dp),
-            verticalArrangement = Arrangement.spacedBy(22.dp),
+            Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 40.dp)
+                .clip(RoundedCornerShape(32.dp))
+                .background(Color(0xFF0E151D).copy(alpha = 0.55f))
+                .padding(horizontal = 32.dp, vertical = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            Text("차가 지금 보고 있는 것", color = Color.White.copy(alpha = 0.75f), fontSize = 20.sp, style = TextStyle(shadow = softShadow))
-            signals.forEach { (k, v) ->
+            Text("차가 지금 보고 있는 것", color = Color.White.copy(alpha = 0.75f), fontSize = Type.Caption)
+            signals.forEach { (ic, k, v) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(12.dp).clip(CircleShape).background(Palette.Mint))
+                    AppIcon(ic, Palette.Mint, 38.dp)
                     Spacer(Modifier.width(16.dp))
-                    Text(k, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.SemiBold, style = TextStyle(shadow = softShadow))
+                    Text(k, color = Color.White, fontSize = Type.Subtitle, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.width(14.dp))
-                    Text(v, color = Color.White.copy(alpha = 0.8f), fontSize = 22.sp, style = TextStyle(shadow = softShadow))
+                    Text(v, color = Color.White.copy(alpha = 0.7f), fontSize = Type.Body)
                 }
             }
         }
@@ -221,27 +236,27 @@ fun CameraScreen(
         ) {
             Text(
                 "버튼을 누르면 오늘의 기록이 쌓여요",
-                color = Color.White, fontSize = 24.sp, style = TextStyle(shadow = softShadow),
+                color = Color.White, fontSize = Type.Body, style = TextStyle(shadow = softShadow),
             )
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(18.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                 listOf(5, 1, 2).forEach { d ->
                     val on = d == dur
                     Text(
                         "${d}s",
                         color = if (on) Color.Black else Color.White,
-                        fontSize = 26.sp,
+                        fontSize = Type.Body,
                         fontWeight = FontWeight.Bold,
                         style = if (on) TextStyle.Default else TextStyle(shadow = softShadow),
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
                             .background(if (on) Color.White else Color.Transparent)
                             .clickable(enabled = !capturing) { dur = d }
-                            .padding(horizontal = 30.dp, vertical = 10.dp),
+                            .padding(horizontal = 24.dp, vertical = 8.dp),
                     )
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
             Shutter(capturing, progress.value) { if (!capturing) capturing = true }
         }
 
@@ -250,15 +265,15 @@ fun CameraScreen(
             Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = 48.dp, bottom = 52.dp)
-                .size(104.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .border(3.dp, Color.White, RoundedCornerShape(22.dp))
+                .size(84.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .border(2.5.dp, Color.White, RoundedCornerShape(18.dp))
                 .clickable(enabled = !capturing, onClick = onToday),
         ) {
-            if (count > 0) {
-                SceneArt(Scenario.eventScenes[(count - 1).coerceIn(0, Scenario.eventScenes.lastIndex)], Modifier.fillMaxSize(), seed = count - 1)
+            if (count > 0 && lastScene != null) {
+                SceneArt(lastScene, Modifier.fillMaxSize(), seed = lastSeed)
                 Text(
-                    "$count", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold,
+                    "$count", color = Color.White, fontSize = Type.Body, fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(6.dp)
@@ -268,7 +283,7 @@ fun CameraScreen(
                 )
             } else {
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                    Text("오늘의\n기록", color = Color.White, fontSize = 18.sp, textAlign = TextAlign.Center)
+                    Text("오늘의\n기록", color = Color.White, fontSize = Type.Caption, textAlign = TextAlign.Center)
                 }
             }
         }
@@ -276,7 +291,7 @@ fun CameraScreen(
         // 저장 안내 (화면은 그대로)
         toast?.let {
             Text(
-                it, color = Palette.Mint, fontSize = 28.sp, fontWeight = FontWeight.Bold,
+                it, color = Palette.Mint, fontSize = Type.Subtitle, fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 44.dp)
@@ -284,26 +299,6 @@ fun CameraScreen(
                     .background(Color.Black.copy(alpha = 0.6f))
                     .padding(horizontal = 34.dp, vertical = 16.dp),
             )
-        }
-
-        // 하단 오른쪽: 다른 앱을 쓰면서 기록 (오버레이 동그라미)
-        Row(
-            Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 48.dp, bottom = 62.dp)
-                .clip(RoundedCornerShape(50))
-                .background(Color.Black.copy(alpha = 0.45f))
-                .border(2.dp, Color.White.copy(alpha = 0.85f), RoundedCornerShape(50))
-                .clickable(enabled = !capturing, onClick = onBackground)
-                .padding(horizontal = 30.dp, vertical = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(Modifier.size(22.dp).clip(CircleShape).background(Palette.Danger))
-            Spacer(Modifier.width(14.dp))
-            Column {
-                Text("다른 앱과 함께 기록", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text("동그라미를 누르면 카메라·소리 5초 저장", color = Color.White.copy(alpha = 0.8f), fontSize = 17.sp)
-            }
         }
 
         // 플래시
@@ -314,22 +309,22 @@ fun CameraScreen(
 }
 
 @Composable
-private fun CircleButton(label: String, modifier: Modifier, onClick: () -> Unit) {
+private fun CircleButton(icon: Int, modifier: Modifier, onClick: () -> Unit) {
     Box(
         modifier
-            .size(76.dp)
+            .size(60.dp)
             .clip(CircleShape)
             .background(Color.Black.copy(alpha = 0.4f))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Text(label, color = Color.White, fontSize = 48.sp, fontWeight = FontWeight.Light) }
+    ) { AppIcon(icon, Color.White, 32.dp) }
 }
 
 @Composable
 private fun Shutter(capturing: Boolean, progress: Float, onClick: () -> Unit) {
     Box(
         Modifier
-            .size(150.dp)
+            .size(136.dp)
             .clip(CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -348,7 +343,7 @@ private fun Shutter(capturing: Boolean, progress: Float, onClick: () -> Unit) {
         }
         Box(
             Modifier
-                .size(if (capturing) 70.dp else 112.dp)
+                .size(if (capturing) 62.dp else 100.dp)
                 .clip(if (capturing) RoundedCornerShape(18.dp) else CircleShape)
                 .background(if (capturing) Palette.Danger else Color.White),
         )

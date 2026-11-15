@@ -1,22 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 차곡차곡 런처 아이콘: 셔터 링(12칸 중 9칸이 쌓임) + 흰 원. 안전영역(지름 66dp) 안에 그림. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 굽이진 길 -->
+    <group>
+        <path android:strokeColor="#FEDA77" android:strokeWidth="6" android:pathData="M55.52,25.04 A29,29 0 0 1 67.17,28.16" />
+        <path android:strokeColor="#F9AF4E" android:strokeWidth="6" android:pathData="M69.79,29.68 A29,29 0 0 1 78.32,38.21" />
+        <path android:strokeColor="#F58529" android:strokeWidth="6" android:pathData="M79.84,40.84 A29,29 0 0 1 82.96,52.48" />
+        <path android:strokeColor="#E95752" android:strokeWidth="6" android:pathData="M82.96,55.52 A29,29 0 0 1 79.84,67.16" />
+        <path android:strokeColor="#DD2A7B" android:strokeWidth="6" android:pathData="M78.32,69.79 A29,29 0 0 1 69.79,78.32" />
+        <path android:strokeColor="#AF2F95" android:strokeWidth="6" android:pathData="M67.17,79.84 A29,29 0 0 1 55.52,82.96" />
+        <path android:strokeColor="#8134AF" android:strokeWidth="6" android:pathData="M52.48,82.96 A29,29 0 0 1 40.83,79.84" />
+        <path android:strokeColor="#6947C1" android:strokeWidth="6" android:pathData="M38.21,78.32 A29,29 0 0 1 29.68,69.79" />
+        <path android:strokeColor="#515BD4" android:strokeWidth="6" android:pathData="M28.16,67.17 A29,29 0 0 1 25.04,55.52" />
+        <path android:strokeColor="#3A4756" android:strokeWidth="6" android:pathData="M25.04,52.48 A29,29 0 0 1 28.16,40.83" />
+        <path android:strokeColor="#3A4756" android:strokeWidth="6" android:pathData="M29.68,38.21 A29,29 0 0 1 38.21,29.68" />
+        <path android:strokeColor="#3A4756" android:strokeWidth="6" android:pathData="M40.83,28.16 A29,29 0 0 1 52.48,25.04" />
+    </group>
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#F2B35E"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="7"
-        android:pathData="M32,74 C44,74 40,56 54,54 C68,52 62,36 76,34" />
-    <!-- 핀 -->
-    <path
-        android:fillColor="#6FCFB3"
-        android:pathData="M76,26 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
-    <path
-        android:fillColor="#EAF0F6"
-        android:pathData="M32,74 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+        android:fillColor="#F4EFE6"
+        android:pathData="M54,54m-16,0a16,16 0,1 1,32 0a16,16 0,1 1,-32 0" />
 </vector>
